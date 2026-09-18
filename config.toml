@@ -8,7 +8,7 @@ taxonomies = []
 
 [extra]
 author = "Sophia Org"
-github = "https://github.com/sophia-org/sophia-stack"
+github = "https://github.com/sophia-org/sophia"
 menu = [
     { name = "home", url = "/" },
     { name = "docs", url = "/docs/" },
