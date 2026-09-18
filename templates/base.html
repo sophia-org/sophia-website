@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ config.title }}{% endblock title %}</title>
+  <meta name="description" content="{{ config.description }}">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <a href="/" class="nav-logo">&gt; sophia</a>
+    <nav>
+      {% for item in config.extra.menu %}
+        <a href="{{ item.url }}">{{ item.name }}</a>
+      {% endfor %}
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock content %}
+  </main>
+
+  <footer>
+    <p>
+      &copy; {{ now() | date(format="%Y") }} {{ config.extra.author }}. 
+      Licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. 
+      Source <a href="{{ config.extra.github }}">available here</a>.
+    </p>
+  </footer>
+</body>
+</html>

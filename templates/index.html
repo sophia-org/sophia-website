@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+  {{ section.content | safe }}
+
+  <h2>Recent News</h2>
+  <ul class="post-list">
+    {% set blog = get_section(path="blog/_index.md") %}
+    {% for page in blog.pages | slice(end=5) %}
+      <li class="post-item">
+        <span class="post-date">{{ page.date | date(format="%Y-%m-%d") }}</span>
+        <a href="{{ page.permalink }}">{{ page.title }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <h2>Documentation</h2>
+  <ul>
+    <li><a href="/docs/architecture/">Architecture Map</a> — Understanding Sophia's visual authority, decoupled window managers, and isolated client namespaces.</li>
+    <li><a href="/docs/building-on-sophia/">Building on Sophia</a> — The developer handbook for composing WMs, shells, and portals.</li>
+  </ul>
+</section>
+{% endblock content %}

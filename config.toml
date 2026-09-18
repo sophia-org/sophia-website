@@ -1,0 +1,16 @@
+title = "Sophia"
+base_url = "https://sophia.gg"
+description = "A modern, transaction-driven X11 display server and compositor."
+default_language = "en"
+compile_sass = false
+minify_html = true
+taxonomies = []
+
+[extra]
+author = "Sophia Org"
+github = "https://github.com/sophia-org/sophia-stack"
+menu = [
+    { name = "home", url = "/" },
+    { name = "docs", url = "/docs/" },
+    { name = "blog", url = "/blog/" }
+]
