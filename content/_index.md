@@ -63,11 +63,13 @@ Sophia ends this by pairing its modular architecture with **XNamespaces** and **
 
 ---
 
-## True Fault Isolation
+## Engineered System Benefits
 
-Because Sophia separates mechanism from policy, your desktop is extraordinarily resilient:
+By rewriting the display stack from scratch in Rust and adopting a compositor-first architecture, Sophia delivers concrete system-level guarantees that traditional display servers cannot match:
 
-*   **Crash-Proof Sessions:** If your custom tiling window manager or panel shell crashes, your session does not go down with it. The Engine continues to run, holding your active windows in their last valid visual state on the screen, and allows your session supervisor to restart the crashed policy client instantly in the background.
-*   **Write in Any Language:** You don't need to write a massive, fragile C/C++ compositor to customize your desktop. If you want a custom window layout, write a lightweight client speaking `sophia_wm_v1` in Nim, Zig, Python, or Rust. The core remains unbothered.
+*   **Tear-Free Atomic Transactions:** The Sophia Engine holds visual authority. Window resizes, layout transitions, and pixel commits are synchronized. Tearing and flickering are prevented structurally because visual states are only page-flipped via the DRM/KMS atomic API once a layout epoch is fully settled.
+*   **TrueColor Depth (24-bit & 32-bit):** The X Server Frontend natively implements modern visual depth standards. It exports 24-bit TrueColor and 32-bit ARGB visuals (with alpha channel support), guaranteeing sharp text rendering and native alpha transparency.
+*   **Crash-Proof Sessions:** If your custom tiling window manager or panel shell crashes, your session does not go down. The Engine continues to run, holding your active windows in their last valid visual state on the screen, while your session supervisor restarts the crashed policy clients instantly in the background.
+*   **Language-Neutral Extension:** You don't need to write a massive, fragile C/C++ compositor to customize your desktop. You can write a lightweight tiling window manager speaking `sophia_wm_v1` or a custom panel speaking `sophia_shell_v1` in Nim, Zig, Python, or Rust. The core visual kernel remains unbothered.
 
 ---
