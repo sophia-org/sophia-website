@@ -12,6 +12,8 @@ The X11 protocol was designed for cooperation, not security. Its flexible, async
 1. **No Isolation:** Any client can read the pixels or keystrokes of another client. A compromised browser can easily inspect your terminal session or password prompt.
 2. **Asynchronous Visual Tearing:** Window resize operations are decoupled from pixel rendering. If an application lags behind the window manager, frames render with mismatched dimensions, causing flickering and transient visual artifacts.
 
+## The Wayland Monolith and Protocol Fragmentation
+
 Wayland addressed these security concerns by isolating client pixels and shifting visual responsibility to the compositor. However, after nearly two decades of development, its architectural trade-offs have introduced severe fragmentation and directly contradicted the Unix philosophy.
 
 By design, Wayland forces layout calculations, input handling, hardware display drivers, and desktop UI into a single, monolithic compositor process. If a Wayland compositor crashes, your entire session and all running applications die with it.
