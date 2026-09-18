@@ -1,27 +1,27 @@
 +++
-title = "Introducing Sophia: Rebuilding X11 for Security and Visual Coherence"
+title = "Introducing Sophia: A Secure, Transaction-Driven X11 Display Server"
 date = 2026-09-18
 +++
 
-We are excited to launch `sophia.gg` and share our progress on **Sophia**, a transaction-driven X11 display server and compositor designed from the ground up for strict confinement, modern visual commits, and decoupled desktop policy.
+We are launching `sophia.gg` to document our progress on **Sophia**, an experimental, transaction-driven X11 display server and compositor. It introduces strict client confinement, synchronized visual commits, and decoupled desktop policy.
 
-## The X11 Conundrum
+## The Limits of X11
 
-For decades, X11 has been the bedrock of Unix-like desktop environments. Its flexible, asynchronous network protocol allowed cooperative clients to exchange window property lists, grab inputs, and share resources easily. However, this flexibility came with fatal flaws:
+The X11 protocol was designed for cooperation, not security. Its flexible, asynchronous design allows clients to share window properties, grab inputs, and read each other’s resources. But this trust creates two significant liabilities:
 
-1. **No Confinement:** Any client can read the pixels or keystrokes of any other client. There is no sandboxing.
-2. **Visual Tearing and Lag:** Resize operations are asynchronous. If a client lags behind the window manager, frames render with mismatched dimensions, resulting in flickering and visual garbage.
+1. **No Isolation:** Any client can read the pixels or keystrokes of another client. A compromised browser can easily inspect your terminal session or password prompt.
+2. **Asynchronous Visual Tearing:** Window resize operations are decoupled from pixel rendering. If an application lags behind the window manager, frames render with mismatched dimensions, causing flickering and transient visual artifacts.
 
-Wayland solved these problems by introducing a compositor-first model where clients render their own frames and the compositor coordinates layouts. However, Wayland pushed window layout, client coordination, and hardware driving into a single, massive monolithic compositor process. This created a new problem: if the window manager or shell crashes, your entire session and all running applications die with it.
+Wayland addressed these issues by isolating client pixels and forcing client-side rendering. However, it also shifted window layout, client coordination, and hardware display drivers into a single, monolithic compositor. If a Wayland compositor crashes, your entire session dies, and all active applications are lost.
 
-## The Sophia Solution
+## The Sophia Architecture
 
-Sophia takes a different path. It preserves the classic, trusted shared-X profile for applications while introducing modern visual commits and explicit confinement boundaries:
+Sophia takes a different approach. It preserves a classic, trusted X11 environment for cooperative applications while introducing strict visual transactions and explicit confinement boundaries:
 
-- **Transaction-Driven Rendering:** The Sophia Engine holds visual authority. Window coordinates, bounds, and surface pixels are committed *atomically*. Tearing, flicker, and black blocks are physically impossible.
-- **Confronting the Shared-X Security Model:** Sophia introduces *XNamespaces*—completely isolated, virtualized X11 environments that are invisible to each other.
-- **De-coupling Layout and Visuals:** Layout policy is externalized to a separate process (like our Nim reference WM, **Hagia**). The WM remains completely blind to application IDs, titles, and clipboard contents, focusing purely on opaque node operations.
+*   **Transaction-Driven Rendering:** The Sophia Engine acts as the visual authority. It commits window geometry and surface pixels atomically. If a client lags during a resize, the compositor retains the last valid visual state until the transaction is ready, preventing visual garbage and flickering by design.
+*   **XNamespaces:** Instead of a single shared environment, Sophia introduces virtualized, isolated X11 domains. Cross-namespace lookups fail closed by default. A web browser running in one namespace cannot inspect or interact with a terminal running in another.
+*   **Decoupled Layout and Visuals:** Layout policy is externalized to an independent process, such as our reference window manager, **Hagia**. The window manager operates purely on opaque layout nodes, remaining blind to window titles, client process IDs, and clipboard contents.
 
-By establishing absolute visual and input authority at the compositor level, Sophia demonstrates that we can have classic, modular Unix desktop architectures with the security and visual fidelity of a modern display system.
+By separating protocol translation, layout policy, and visual composition into independent processes, Sophia demonstrates that we can retain modular Unix desktop architectures without sacrificing security or visual coherence.
 
-We invite you to explore our documentation, download the repository, and join us on this journey to reshape desktop computing.
+We invite you to explore our documentation, review the source code, and follow our development as we refine the implementation.
