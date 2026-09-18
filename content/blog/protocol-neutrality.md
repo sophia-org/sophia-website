@@ -15,7 +15,7 @@ Sophia is built on a different premise: **the graphics engine should be a protoc
 
 In the early design phases of Sophia, we drew deep inspiration from **XLibre** (now archived under `research/xlibre/`). XLibre was an external, custom-patched C-based fork of the Xorg server that prototyped X11 resource virtualization and routed pointer inputs. Studying its layout and routing design provided us with invaluable architectural lessons on how X11 namespaces could be isolated.
 
-But studying XLibre also taught us a hard lesson. Carrying or patching a massive legacy C codebase would introduce severe security and maintenance liabilities, running directly counter to our goal of a secure, modern Rust implementation.
+But studying XLibre also taught us a hard lesson. Carrying or patching a massive legacy C codebase would introduce severe security and maintenance liabilities, running directly counter to our goal of a modern, memory-safe display stack built cleanly from scratch.
 
 On July 8, 2026, we made an architectural cutover. We reframed the entire display stack around the **Sophia Engine** (`sophia-engine`) as the permanent visual and input authority. 
 
