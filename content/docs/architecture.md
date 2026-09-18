@@ -56,7 +56,7 @@ Sophia divides its systems based on what each part is permitted to control, rath
 
 ## System Subcomponents
 
-- **Sophia Engine:** The absolute visual authority. It manages physical input, visual state, frame scheduling, transaction commits, rendering, and display output.
+- **Sophia Engine:** The visual authority. It manages physical input, visual state, frame scheduling, transaction commits, rendering, and display output.
 - **Sophia X Server Frontend:** A clean, modern X11 frontend. It presents the established X11 API, translates protocol state into Sophia surface transactions, and performs X11 delivery rules. It does not control layout or scanout.
 - **Sophia WM (Window Manager):** A dedicated policy process handling layout, focus, keybindings, workspaces, and launch decisions. It operates entirely on opaque layout nodes and `SurfaceId` handles.
 - **Sophia Portals:** Mechanisms for deliberate cross-namespace transfers, such as clipboard sharing, drag-and-drop, and screen capture.
