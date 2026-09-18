@@ -12,7 +12,11 @@ The X11 protocol was designed for cooperation, not security. Its flexible, async
 1. **No Isolation:** Any client can read the pixels or keystrokes of another client. A compromised browser can easily inspect your terminal session or password prompt.
 2. **Asynchronous Visual Tearing:** Window resize operations are decoupled from pixel rendering. If an application lags behind the window manager, frames render with mismatched dimensions, causing flickering and transient visual artifacts.
 
-Wayland addressed these issues by isolating client pixels and forcing client-side rendering. However, it also shifted window layout, client coordination, and hardware display drivers into a single, monolithic compositor. If a Wayland compositor crashes, your entire session dies, and all active applications are lost.
+Wayland addressed these security concerns by isolating client pixels and shifting visual responsibility to the compositor. However, after nearly two decades of development, its architectural trade-offs have introduced severe fragmentation and directly contradicted the Unix philosophy.
+
+By design, Wayland forces layout calculations, input handling, hardware display drivers, and desktop UI into a single, monolithic compositor process. If a Wayland compositor crashes, your entire session and all running applications die with it.
+
+Furthermore, because Wayland left essential desktop operations—like clipboards, screen capture, and window positioning—unspecified in the core protocol, basic functionality has been relegated to a sprawling design-by-committee process. The result is years of stalled protocol proposals and severe fragmentation. Key features are implemented through mutually incompatible extension families (such as GNOME, KDE, or wlroots), forcing applications to write compositor-specific backends for basic tasks.
 
 ## The Sophia Architecture
 
