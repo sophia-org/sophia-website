@@ -75,7 +75,7 @@ This decoupling establishes a highly modular Protocol Authority Layer:
 
 *   **The Default Rust Frontend (`sophia-x-authority`):** Our lightweight translator that terminates a secure, modern subset of X11 and converts its state into Engine transactions.
 *   **Pluggable Adapters:** Because the Engine boundary is agnostic, any developer can write a translation frontend. You could plug in a native Wayland translator, support a future custom protocol, or even run multiple frontend translators simultaneously on the same visual canvas.
-*   **The Legacy Seam (XLibre):** During early design, we drew inspiration from XLibre—an archived, custom-patched C-based Xorg server that prototyped X11 resource virtualization and routed inputs. While retained as historical evidence outside our production code, XLibre serves as an architectural blueprint for a heavyweight compatibility provider, should legacy application gaps ever justify its maintenance cost.
+*   **The Legacy Seam (XLibre):** During early design, we drew inspiration from XLibre—a custom-patched, C-based Xorg server that prototypes X11 resource virtualization and routed inputs. XLibre serves as an architectural blueprint for a heavyweight compatibility provider, should legacy application gaps ever justify its integration cost.
 
 ---
 
