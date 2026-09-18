@@ -16,19 +16,24 @@ Sophia decomposes the modern desktop into a modular **visual pipeline** of speci
 ## The Visual Pipeline
 
 ```text
-               [ physical hardware / KMS / DRM ]
-                              │
-                              ▼
-                    ┌───────────────────┐
-                    │   SOPHIA ENGINE   │ ◄── [ mechanism / visual authority ]
-                    └──────┬─────┬──────┘
-                           │     ▲
-       [ sophia_wm_v1 ]    │     │      [ sophia_shell_v1 ]
-      opaque layout nodes  ▼     ▼      descriptors & reservations
-                    ┌───────┐   ┌───────┐
-                    │ CODES │   │ CODES │ ◄── [ decoupled policy edges ]
-                    │  WM   │   │ SHELL │
-                    └───────┘   └───────┘
+                  [ sandboxed clients ]
+                            │
+                            ▼ (classic X11 socket)
+                  ┌───────────────────┐
+                  │ X SERVER FRONTEND │ ◄── [ protocol translation ]
+                  └─────────┬─────────┘
+                            │
+                            ▼ (anonymous transactions)
+                  ┌───────────────────┐
+                  │   SOPHIA ENGINE   │ ◄── [ visual kernel / KMS / DRM ]
+                  └──────┬─────┬──────┘
+                         │     ▲
+     [ sophia_wm_v1 ]    │     │      [ sophia_shell_v1 ]
+    opaque layout nodes  ▼     ▼      descriptors & reservations
+                  ┌───────┐   ┌───────┐
+                  │ CODES │   │ CODES │ ◄── [ decoupled policy edges ]
+                  │  WM   │   │ SHELL │
+                  └───────┘   └───────┘
 ```
 
 Instead of a singular monolithic process, Sophia divides authority among independent actors that each do one thing, and do it well:
