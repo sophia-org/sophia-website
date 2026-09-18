@@ -11,11 +11,11 @@ In both paradigms, the graphics engine is tightly coupled to the application pro
 
 Sophia is built on a different premise: **the graphics engine should be a protocol-neutral visual kernel.**
 
-## The Evolution: From XLibre to the Sophia Engine
+## The Evolution: From Xorg Patches to the Sophia Engine
 
-In the early phases of Sophia, our architecture was centered on **XLibre** (now archived under `research/xlibre/`). XLibre was a heavily modified, C-based Xorg server. It proved that we could successfully isolate X11 client resources into secure namespaces and route pointer inputs safely.
+In the early phases of Sophia, our architecture was centered on **XLibre** (now archived under `research/xlibre/`). Rather than writing a display server from scratch, we experimented with this custom-patched, C-based fork of the Xorg server. It proved that we could isolate X11 client resources into secure namespaces and route pointer inputs safely.
 
-But XLibre also taught us a hard lesson. Carrying the legacy Xorg codebase introduced severe maintenance burdens and ran counter to our desire for a highly secure, modern Rust implementation. 
+But this prototype also taught us a hard lesson. Carrying the massive, legacy Xorg codebase introduced severe maintenance burdens and ran counter to our goal of a secure, modern Rust implementation. 
 
 On July 8, 2026, we made an architectural cutover. We reframed the entire display stack around the **Sophia Engine** (`sophia-engine`) as the permanent visual and input authority. 
 
