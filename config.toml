@@ -12,5 +12,6 @@ github = "https://github.com/sophia-org/sophia-stack"
 menu = [
     { name = "home", url = "/" },
     { name = "docs", url = "/docs/" },
-    { name = "blog", url = "/blog/" }
+    { name = "blog", url = "/blog/" },
+    { name = "code", url = "https://github.com/sophia-org" }
 ]
