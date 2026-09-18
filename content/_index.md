@@ -5,11 +5,11 @@ template = "index.html"
 
 # Sophia
 
-We have been building desktops the wrong way for thirty years.
+**Sophia** is a modern, transaction-driven display server and compositor that applies the **Unix Philosophy** to the graphical desktop.
 
-Traditional display servers are monolithic. They force window layouts, graphics composition, input event routing, and panel rendering into a single, fragile process. If one part falters—if your status bar freezes or your tiling window manager crashes—your entire session dies. Everything you were working on vanishes.
+Traditional compositors are monolithic. They force window layouts, graphics composition, input event routing, and panel rendering into a single, complex process. If one part falters—if your status bar freezes or your tiling window manager crashes—your entire session goes down with it, taking your open applications with it.
 
-Sophia changes this. It is a modern, transaction-driven display server and compositor that decomposes the desktop into a modular, cooperative pipeline. It reclaims the Unix philosophy: write small, specialized programs that do one thing and do it well, then coordinate them over clean, versioned boundaries.
+Sophia changes this by decomposing the desktop into a modular, cooperative pipeline. It divides authority among small, specialized programs that each do one thing well, coordinating them over clean, versioned boundaries.
 
 ---
 
