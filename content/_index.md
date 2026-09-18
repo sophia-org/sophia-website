@@ -63,6 +63,22 @@ Sophia ends this by pairing its modular architecture with **XNamespaces** and **
 
 ---
 
+## Protocol-Neutrality: Pluggable Frontends
+
+A display server should not be bound to the quirks of a single graphics protocol. 
+
+Traditional compositors are tightly coupled to their client protocols—X11 servers are hardcoded around X11 concepts, and Wayland compositors are written around Wayland-specific surface states. 
+
+Sophia is different. The Engine is entirely protocol-neutral. It has no understanding of X11 resource trees, nor does it speak Wayland. It manages only abstract, anonymous visual transactions (buffers, damages, and layout epochs). 
+
+This decoupling establishes a highly modular Protocol Authority Layer:
+
+*   **The Default Rust Frontend (`sophia-x-authority`):** Our lightweight translator that terminates a secure, modern subset of X11 and converts its state into Engine transactions.
+*   **Pluggable Adapters:** Because the Engine boundary is agnostic, any developer can write a translation frontend. You could plug in a native Wayland translator, support a future custom protocol, or even run multiple frontend translators simultaneously on the same visual canvas.
+*   **The Legacy Seam (XLibre):** During early development, we built XLibre—a custom-patched, C-based Xorg server that prototyped X11 resource virtualization and routed inputs. While retired to our research archives to keep our production footprint clean and secure, XLibre remains a blueprint for a heavyweight compatibility provider, should legacy application gaps ever justify its maintenance cost.
+
+---
+
 ## Engineered System Benefits
 
 By rewriting the display stack from scratch in Rust and adopting a compositor-first architecture, Sophia delivers concrete system-level guarantees that traditional display servers cannot match:
