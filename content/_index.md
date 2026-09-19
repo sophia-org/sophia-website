@@ -86,13 +86,15 @@ During early design, I drew inspiration from `XLibre`—a custom-patched, C-base
 
 ## Engineered System Benefits
 
-Building a display engine from scratch around a transaction-driven architecture delivers three concrete, system-level guarantees:
+Building a display engine from scratch around a transaction-driven architecture delivers four concrete, system-level guarantees:
 
 First, **tear-free atomic transactions.** Window resizes, layout transitions, and pixel commits are synchronized. Tearing and flickering are prevented structurally because visual states are only page-flipped via the DRM/KMS atomic API once a layout epoch is fully settled.
 
 Second, **modern visual rendering.** `sophia-x-authority` natively implements modern visual depth standards, exporting 24-bit TrueColor and 32-bit ARGB visuals with full alpha transparency.
 
-Third, **crash-proof sessions.** If your custom tiling window manager or panel shell crashes, your session does not go down. The engine continues to run, holding your active windows in their last valid visual state on the screen while your session supervisor restarts the crashed policy clients in the background.
+Third, **hardened client confinement.** By routing applications into isolated `XNamespaces`, Sophia structurally prevents cross-client pixel and input sniffing. Common vulnerabilities—such as unauthorized clipboard capturing, drag-and-drop snooping, or screen scraping—fail closed by default, requiring explicit brokered handoffs.
+
+Fourth, **crash-proof sessions.** If your custom tiling window manager or panel shell crashes, your session does not go down. The engine continues to run, holding your active windows in their last valid visual state on the screen while your session supervisor restarts the crashed policy clients in the background.
 
 No monolith. No single point of failure.
 
