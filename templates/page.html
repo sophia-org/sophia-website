@@ -8,7 +8,7 @@
     <h1>{{ page.title }}</h1>
     {% if page.date %}
       <div style="font-family: monospace; color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
-        {{ page.date | date(format="%Y-%m-%d") }}
+        {{ page.date | date(format="%Y-%m-%d") }}{% if page.extra.author %} by {{ page.extra.author }}{% endif %}
       </div>
     {% elif page.extra.version %}
       <div style="font-family: monospace; color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">

@@ -1,6 +1,8 @@
 +++
 title = "Beyond X11 and Wayland: Building a Protocol-Neutral Visual Kernel"
 date = 2026-09-19
+[extra]
+author = "niltempus"
 +++
 
 Binding a display server's core compositor directly to a single application wire protocol introduces structural lock-in. If you run X11, your display server is a massive, monolithic interpreter that manages drivers, composition, inputs, and client state in a single, un-sandboxed address space. If you run Wayland, your compositor is a different kind of monolith, forcing layout calculation, presentation timing, display driving, and status rendering into one fragile execution loop. Supporting a new protocol requires rebuilding the display server or writing massive, intrusive translation layers.

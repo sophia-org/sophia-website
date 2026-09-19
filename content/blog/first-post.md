@@ -1,6 +1,8 @@
 +++
 title = "Introducing Sophia: A Secure, Transaction-Driven X11 Display Server"
 date = 2026-09-18
+[extra]
+author = "niltempus"
 +++
 
 The X11 protocol was designed for cooperation, not security. Its flexible, asynchronous design allows clients to share window properties, grab inputs, and read each other’s resources. But this trust creates significant liabilities: any client can inspect neighboring pixels or grab keystrokes, and asynchronous resizing causes severe display tearing. Wayland solved these security issues but introduced severe desktop fragmentation and created a monolithic, fragile compositor loop.

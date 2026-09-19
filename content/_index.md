@@ -1,9 +1,9 @@
 +++
-title = "Sophia Display Server"
+title = "Sophia by niltempus"
 template = "index.html"
 +++
 
-# Sophia
+# Sophia by niltempus
 
 Traditional desktop compositors are monolithic. They force window layouts, graphics composition, input event routing, and panel rendering into a single process. If a tiling window manager crashes or a status bar freezes, your entire session goes down, taking your open applications with it. 
 
