@@ -167,3 +167,23 @@ footer {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+th, td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+
+th {
+  background-color: var(--code-bg);
+  font-family: monospace;
+  font-weight: bold;
+}

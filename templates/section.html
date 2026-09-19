@@ -14,7 +14,11 @@
   <ul class="post-list">
     {% for page in section.pages %}
       <li class="post-item">
-        <span class="post-date">{% if page.date %}{{ page.date | date(format="%Y-%m-%d") }}{% else %}[no date]{% endif %}</span>
+        {% if "blog" in page.components %}
+          <span class="post-date">{% if page.date %}{{ page.date | date(format="%Y-%m-%d") }}{% else %}[no date]{% endif %}</span>
+        {% elif page.extra.version %}
+          <span class="post-date">v{{ page.extra.version }}</span>
+        {% endif %}
         <a href="{{ page.permalink }}">{{ page.title }}</a>
       </li>
     {% endfor %}

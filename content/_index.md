@@ -5,11 +5,9 @@ template = "index.html"
 
 # Sophia
 
-**Sophia** is a modern, transaction-driven display server and compositor that applies the **Unix Philosophy** to the graphical desktop.
+Traditional desktop compositors are monolithic. They force window layouts, graphics composition, input event routing, and panel rendering into a single process. If a tiling window manager crashes or a status bar freezes, your entire session goes down, taking your open applications with it. 
 
-Traditional compositors are monolithic. They force window layouts, graphics composition, input event routing, and panel rendering into a single, complex process. If one part falters—if your status bar freezes or your tiling window manager crashes—your entire session goes down with it, taking your open applications with it.
-
-Sophia changes this by decomposing the desktop into a modular, cooperative pipeline. It divides authority among small, specialized programs that each do one thing well, coordinating them over clean, versioned boundaries.
+Sophia solves this by decomposing the desktop into a modular, cooperative pipeline. I have divided authority among four specialized, sandboxed programs that each do one thing well, coordinating them over clean, versioned boundaries.
 
 ---
 
@@ -36,56 +34,66 @@ Sophia changes this by decomposing the desktop into a modular, cooperative pipel
                   └───────┘   └───────┘
 ```
 
-Instead of one giant process holding all the cards, Sophia divides authority among four distinct, focused actors:
+Sophia abandons the monolithic compositor loop. Instead, it delegates desktop authority across independent processes over versioned Unix sockets.
 
-### 1. The Visual Kernel (Sophia Engine)
-The unopinionated center of gravity. The Engine owns the physical hardware, schedules frame updates, and drives KMS/DRM presentation. It has no interest in application protocols like X11 or Wayland, nor does it care how your windows are tiled. It simply enforces visual and input authority on abstract, anonymous surfaces, committing updates atomically to prevent tearing.
+At the center sits `sophia-engine`. The engine owns the physical KMS/DRM frame scheduling, hardware input routing, and scene-graph composition. It knows nothing of client-facing window protocols like X11 or Wayland. It consumes only abstract, anonymous visual transaction streams.
 
-### 2. The X11 Protocol Translator (X Server Frontend)
-A lightweight, secure X11 translator written from scratch in Rust (`sophia-x-authority`). It listens on standard X11 sockets, manages window IDs, and translates X11 draw-calls and window allocations into clean, anonymous transactions for the Engine. It has no access to physical display devices or layout policies.
+To interface with the engine, translators like `sophia-x-authority` terminate client-side X11 connections and map application states directly to these anonymous transactions. 
 
-### 3. The Layout Legislator (Sophia WM)
-An external process (like our reference implementation, **Hagia**) communicating over the `sophia_wm_v1` wire. It receives anonymous spatial coordinates and abstract window nodes, then returns layout and focus proposals. It operates completely blind to window titles, process IDs, and clipboard contents.
+Policy and chrome are similarly decoupled. External window managers negotiate geometries over the `sophia_wm_v1` protocol, operating purely on anonymous spatial nodes and focus trees. They remain completely blind to window titles, process IDs, or clipboard data. Status bars, launchers, and panel widgets coordinate screen-edge reservations over the `sophia_shell_v1` protocol.
 
-### 4. The Human Interface Coordinator (Sophia Shell)
-A confined client (like our reference shell, **Narthex**) communicating over the `sophia_shell_v1` wire. The Shell specifies where panels, workspace switchers, and status bars go. It reserves edge spans for your work area and emits high-level UI descriptors, which the Engine renders securely inside a sandboxed domain.
+A single window update traces this pipeline sequentially.
+
+First, **the draw.** An application writes a draw call to its local X11 socket.
+
+Second, **the translation.** `sophia-x-authority` intercepts the request, virtualizes the window resource, and submits an anonymous draw transaction to the engine.
+
+Third, **the proposal.** The engine passes a spatial snapshot over `sophia_wm_v1` to the external policy supervisor. The supervisor calculates the layout and returns a geometry proposal.
+
+Finally, **the commit.** The engine validates the geometry, synchronizes the damage regions, and page-flips the composited scene via the kernel's DRM atomic API.
+
+No tearing. No flickering. Just clean, isolated transactions.
 
 ---
 
-## Strict Confinement with XNamespaces
+## Confinement via XNamespaces
 
-Standard X11 is a security nightmare: any running application can sniff your clipboard, record your keystrokes, or inject fake inputs into other windows. There is no sandboxing.
+Standard X11 is a security disaster. Any running application can sniff your clipboard, record your keystrokes, or inject fake input into neighboring windows. There is no sandboxing.
 
-Sophia ends this by pairing its modular architecture with **XNamespaces** and **Portals**:
+Sophia fixes this with `XNamespaces` and `Portals`.
 
-*   **Isolated Namespaces:** Applications run in isolated containment domains (XNamespaces). Cross-namespace window lookups and property sharing fail closed by default. A web browser running in your untrusted namespace physically cannot see or interact with the terminal running in your secure namespace.
-*   **Brokered Portals (`sophia_portal_v1`):** Clipboard sharing, drag-and-drop, and screen capture are handled by an independent, sandboxed Portal Broker. Data is never shared implicitly; transfers are treated as explicit transaction handoffs requiring your consent.
+Applications run in isolated containment domains. Cross-namespace window lookups and property sharing fail closed by default. A web browser in an untrusted namespace cannot see or interact with a secure terminal session. It is physically impossible.
+
+Common operations like clipboard sharing, drag-and-drop, and screen capture move to `sophia_portal_v1`. This sandboxed portal broker treats data transfers as explicit transactions. Nothing is shared implicitly. Every transfer requires your consent.
 
 ---
 
 ## Protocol-Neutrality: Pluggable Frontends
 
-A display server should not be bound to the quirks of a single graphics protocol. 
+A display server should not be bound to the quirks of a single graphics protocol.
 
-Traditional compositors are tightly coupled to their client protocols—X11 servers are hardcoded around X11 concepts, and Wayland compositors are written around Wayland-specific surface states. 
+Traditional compositors are tightly coupled to their clients. X11 servers are hardcoded around X11 concepts; Wayland compositors are written around Wayland states. 
 
-Sophia is different. The Engine is entirely protocol-neutral. It has no understanding of X11 resource trees, nor does it speak Wayland. It manages only abstract, anonymous visual transactions (buffers, damages, and layout epochs). 
+The `sophia-engine` is entirely protocol-neutral. It knows nothing of X11 resource trees, and it does not speak Wayland. It manages only abstract, anonymous visual transactions: buffers, damage regions, and layout epochs.
 
-This decoupling establishes a highly modular Protocol Authority Layer:
+This decoupling creates a pluggable Protocol Authority Layer. 
 
-*   **The Default Rust Frontend (`sophia-x-authority`):** Our lightweight translator that terminates a secure, modern subset of X11 and converts its state into Engine transactions.
-*   **Pluggable Adapters:** Because the Engine boundary is agnostic, any developer can write a translation frontend. You could plug in a native Wayland translator, support a future custom protocol, or even run multiple frontend translators simultaneously on the same visual canvas.
-*   **The Legacy Seam (XLibre):** During early design, we drew inspiration from XLibre—a custom-patched, C-based Xorg server that prototypes X11 resource virtualization and routed inputs. XLibre serves as an architectural blueprint for a heavyweight compatibility provider, should legacy application gaps ever justify its integration cost.
+The default translator is `sophia-x-authority`—a lightweight Rust frontend that terminates a secure subset of X11 and converts its state into engine transactions. Because the engine is agnostic, you can write and plug in any translation frontend. You could run a native Wayland frontend alongside our X11 frontend on the same display, completely side-by-side.
+
+During early design, I drew inspiration from `XLibre`—a custom-patched, C-based Xorg server that prototypes X11 resource virtualization. `XLibre` remains our architectural blueprint for a heavyweight legacy compatibility provider, should application compatibility gaps ever justify its integration cost.
 
 ---
 
 ## Engineered System Benefits
 
-By building the display engine from scratch around a compositor-first architecture, Sophia delivers concrete system-level guarantees that traditional display servers cannot match:
+Building a display engine from scratch around a transaction-driven architecture delivers three concrete, system-level guarantees:
 
-*   **Tear-Free Atomic Transactions:** The Sophia Engine holds visual authority. Window resizes, layout transitions, and pixel commits are synchronized. Tearing and flickering are prevented structurally because visual states are only page-flipped via the DRM/KMS atomic API once a layout epoch is fully settled.
-*   **TrueColor Depth (24-bit & 32-bit):** The X Server Frontend natively implements modern visual depth standards. It exports 24-bit TrueColor and 32-bit ARGB visuals (with alpha channel support), guaranteeing sharp text rendering and native alpha transparency.
-*   **Crash-Proof Sessions:** If your custom tiling window manager or panel shell crashes, your session does not go down. The Engine continues to run, holding your active windows in their last valid visual state on the screen, while your session supervisor restarts the crashed policy clients instantly in the background.
-*   **Language-Neutral Extension:** You don't need to write or compile a massive, monolithic C-based compositor to customize your desktop. You can write a lightweight tiling window manager speaking `sophia_wm_v1` or a custom panel speaking `sophia_shell_v1` in Nim, Zig, Python, or Rust. The core visual kernel remains unbothered.
+First, **tear-free atomic transactions.** Window resizes, layout transitions, and pixel commits are synchronized. Tearing and flickering are prevented structurally because visual states are only page-flipped via the DRM/KMS atomic API once a layout epoch is fully settled.
+
+Second, **modern visual rendering.** `sophia-x-authority` natively implements modern visual depth standards, exporting 24-bit TrueColor and 32-bit ARGB visuals with full alpha transparency.
+
+Third, **crash-proof sessions.** If your custom tiling window manager or panel shell crashes, your session does not go down. The engine continues to run, holding your active windows in their last valid visual state on the screen while your session supervisor restarts the crashed policy clients in the background.
+
+No monolith. No single point of failure.
 
 ---

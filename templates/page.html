@@ -10,6 +10,10 @@
       <div style="font-family: monospace; color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
         {{ page.date | date(format="%Y-%m-%d") }}
       </div>
+    {% elif page.extra.version %}
+      <div style="font-family: monospace; color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+        v{{ page.extra.version }}
+      </div>
     {% endif %}
   </header>
 

@@ -1,6 +1,8 @@
 +++
 title = "Architecture Map"
 weight = 1
+[extra]
+version = "0.1.0"
 +++
 
 Sophia divides its systems based on what each part is permitted to control, rather than what is easiest to write.
@@ -56,9 +58,14 @@ Sophia divides its systems based on what each part is permitted to control, rath
 
 ## System Subcomponents
 
-- **Sophia Engine:** The visual authority. It manages physical input, visual state, frame scheduling, transaction commits, rendering, and display output.
-- **Sophia X Server Frontend:** A clean, modern X11 frontend. It presents the established X11 API, translates protocol state into Sophia surface transactions, and performs X11 delivery rules. It does not control layout or scanout.
-- **Sophia WM (Window Manager):** A dedicated policy process handling layout, focus, keybindings, workspaces, and launch decisions. It operates entirely on opaque layout nodes and `SurfaceId` handles.
-- **Sophia Portals:** Mechanisms for deliberate cross-namespace transfers, such as clipboard sharing, drag-and-drop, and screen capture.
-- **Metadata Broker and Chrome:** Translates protocol metadata into redacted compositor UI without exposing namespaces to the window manager.
-- **Sophia Shell:** A separately confined client that specifies shell UI, such as panels and switchers, and requests work-area reservations. The Engine renders and presents that UI.
+To prevent privilege escalation and ensure failure isolation, the architecture enforces strict boundary checks.
+
+**`sophia-engine`** serves as the visual kernel. It controls raw physical input, schedules frames, tracks damage, and handles scanout via DRM/KMS.
+
+**`sophia-x-authority`** translates application protocols. It virtualizes standard X11 resources, window allocations, and input events, converting them into namespace-checked engine transactions.
+
+**`sophia-wm`** legislates desktop policy. It calculates spatial layouts, window focus, and workspace mappings using opaque geometry node references.
+
+**`sophia-portals`** mediates sandboxed data handoffs. It authorizes clipboard sharing, drag-and-drop actions, and display capture requests via `sophia_portal_v1`.
+
+**`sophia-shell`** draws desktop chrome. It renders panel widgets and status indicators, reserving edge boundaries over `sophia_shell_v1`.
