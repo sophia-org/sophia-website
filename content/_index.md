@@ -7,7 +7,7 @@ template = "index.html"
 
 Traditional desktop compositors are monolithic. They force window layouts, graphics composition, input event routing, and panel rendering into a single process. If a tiling window manager crashes or a status bar freezes, your entire session goes down, taking your open applications with it. 
 
-Sophia solves this by applying the Unix philosophy directly to the desktop: I have divided desktop authority among four specialized, independent programs that each do one thing and do it well, coordinating them over clean, versioned boundaries.
+Sophia solves this by applying the Unix philosophy directly to the desktop: I have divided desktop authority among specialized, independent processes that each do one thing well, coordinating them over clean, versioned boundaries.
 
 ---
 
