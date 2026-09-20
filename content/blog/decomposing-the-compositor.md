@@ -1,5 +1,5 @@
 +++
-title = "Decomposing the Compositor"
+title = "What 'Compositing' means in the Sophia Engine"
 date = 2026-09-20
 [extra]
 author = "niltempus"
