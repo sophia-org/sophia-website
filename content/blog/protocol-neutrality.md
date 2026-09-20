@@ -13,7 +13,7 @@ To break this coupling, I have built `sophia-engine 0.1.0` around a different pr
 
 In the early design phases, I looked deeply at `XLibre` (a custom-patched, C-based fork of Xorg prototyping X11 resource virtualization) and standard Wayland compositors. But I was deeply frustrated by the architectural layout of both. Traditional X11 display servers are massive, un-sandboxed monoliths, while Wayland has devolved into a design-by-committee ethos with half-baked, highly fragmented protocols that force basic desktop coordination into fragile, monolithic compositor loops.
 
-I wanted a clean-room, robust display stack built completely from scratch. Rather than aligning with any language hype, I used the best language and tools available for a secure, asynchronous system—and Rust happened to fit that mold perfectly for this application. So, instead of patching legacy code or copying Wayland's design, I built Sophia.
+I wanted a highly modular, robust display stack built completely from scratch. Rather than aligning with any language hype, I used the best language and tools available for a secure, asynchronous system—and Rust happened to fit that mold perfectly for this application. So, instead of patching legacy code or copying Wayland's design, I built Sophia.
 
 On July 8, 2026, I made an architectural cutover to establish our permanent model:
 *   I reframed the entire display stack around `sophia-engine 0.1.0` as the permanent visual and input authority.
@@ -24,7 +24,7 @@ The core engine has no knowledge of X11 window hierarchies, atoms, selections, o
 
 ## The Pluggable Protocol Layer
 
-By stripping protocol complexity out of the graphics kernel, I established a clean, pluggable Protocol Authority Layer. Sophia’s default translator is `sophia-x-authority 0.1.0`, a clean-room X11 subset parser. It intercepts classic X11 sockets, handles resource management, and translates client requests into anonymous engine transactions.
+By stripping protocol complexity out of the graphics kernel, I established a clean, pluggable Protocol Authority Layer. Sophia’s default translator is `sophia-x-authority 0.1.0`, a lightweight X11 subset parser. It intercepts classic X11 sockets, handles resource management, and translates client requests into anonymous engine transactions.
 
 Because the engine’s transaction boundaries are protocol-neutral, this frontend is entirely replaceable:
 
