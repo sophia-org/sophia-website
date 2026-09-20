@@ -9,14 +9,13 @@ Binding a display server's core compositor directly to a single application wire
 
 To break this coupling, I have built `sophia-engine 0.1.0` around a different premise: the graphics engine should be a protocol-neutral visual kernel.
 
-## The Evolution: From Architectural Inspiration to the Sophia Engine
+## The Evolution: Designing the Sophia Engine
 
-In the early design phases of Sophia, I drew deep inspiration from `XLibre`. `XLibre` is an actively developed, custom-patched C-based fork of the Xorg server that prototypes X11 resource virtualization and routed pointer inputs. Studying its layout and routing design provided me with invaluable architectural lessons on how X11 namespaces could be isolated.
+In the early design phases, I looked deeply at `XLibre` (a custom-patched, C-based fork of Xorg prototyping X11 resource virtualization) and standard Wayland compositors. But I was deeply frustrated by the architectural layout of both. Traditional X11 display servers are massive, un-sandboxed monoliths, while Wayland compositors force layout calculation, presentation timing, display driving, and status rendering into one fragile, monolithic execution loop.
 
-But studying `XLibre` also taught me a hard lesson. Carrying or patching a massive legacy C codebase would introduce severe security and maintenance liabilities, running directly counter to my goal of a modern, memory-safe display stack built cleanly from scratch.
+I wanted a modern, memory-safe display stack built cleanly from scratch in Rust. So, instead of patching legacy code or copying Wayland's design, I started with Rust and built Sophia.
 
-On July 8, 2026, I made an architectural cutover:
-*   I retired the C-based legacy prototype.
+On July 8, 2026, I made an architectural cutover to establish our permanent model:
 *   I reframed the entire display stack around `sophia-engine 0.1.0` as the permanent visual and input authority.
 *   I built a graphics kernel that understands only abstract, anonymous visual transactions: buffers, damage regions, and spatial transformations.
 *   I exposed a protocol-neutral `SurfaceContentStream` that leaves application-facing parsing to independent processes.
