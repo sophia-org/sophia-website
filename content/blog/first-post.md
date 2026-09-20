@@ -30,7 +30,7 @@ Furthermore, because Wayland left essential desktop operations—like clipboards
 Sophia takes a different approach. It preserves a classic, trusted X11 environment for cooperative applications while introducing strict visual transactions and explicit confinement boundaries:
 
 *   **Transaction-Driven Rendering:** My work shifts visual authority entirely to `sophia-engine 0.1.0`. The engine commits window geometry and surface pixels atomically. If a client lags during a resize, the compositor retains the last valid visual state until the transaction is ready, preventing visual garbage and flickering by design.
-*   **XNamespaces:** Instead of a single shared environment, Sophia introduces virtualized, isolated X11 domains. Cross-namespace lookups fail closed by default. A web browser running in one namespace cannot inspect or interact with a terminal running in another.
+*   **Confinement via Namespaces:** Instead of a single shared environment, Sophia introduces virtualized, isolated domains (projected as `XNamespaces` for X11 clients). Cross-namespace lookups fail closed by default. A web browser running in one namespace cannot inspect or interact with a terminal running in another.
 *   **Decoupled Layout and Visuals:** Layout policy is externalized to an independent process, such as our reference window manager, `Hagia 0.1.0`. The window manager operates purely on opaque layout nodes, remaining blind to window titles, client process IDs, and clipboard contents.
 
 By separating protocol translation, layout policy, and visual composition into independent processes, Sophia demonstrates that we can retain modular Unix desktop architectures without sacrificing security or visual coherence.

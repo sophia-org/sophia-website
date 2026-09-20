@@ -56,11 +56,11 @@ No tearing. No flickering. Just clean, isolated transactions.
 
 ---
 
-## Confinement via XNamespaces
+## Confinement via Namespaces
 
 Standard X11 is a security disaster. Any running application can sniff your clipboard, record your keystrokes, or inject fake input into neighboring windows. There is no sandboxing.
 
-Sophia fixes this with `XNamespaces` and `Portals`.
+Sophia fixes this by routing applications into protocol-neutral, isolated **Namespaces** (such as our default `XNamespaces` for X11 clients) mediated by secure **Portals**.
 
 Applications run in isolated containment domains. Cross-namespace window lookups and property sharing fail closed by default. A web browser in an untrusted namespace cannot see or interact with a secure terminal session. It is physically impossible.
 
@@ -92,7 +92,7 @@ First, **tear-free atomic transactions.** Window resizes, layout transitions, an
 
 Second, **modern visual rendering.** `sophia-x-authority` natively implements modern visual depth standards, exporting 24-bit TrueColor and 32-bit ARGB visuals with full alpha transparency.
 
-Third, **hardened client confinement.** By routing applications into isolated `XNamespaces`, Sophia structurally prevents cross-client pixel and input sniffing. Common vulnerabilities—such as unauthorized clipboard capturing, drag-and-drop snooping, or screen scraping—fail closed by default, requiring explicit brokered handoffs.
+Third, **hardened client confinement.** By routing applications into isolated **Namespaces** (projected as `XNamespaces` for X11 clients), Sophia structurally prevents cross-client pixel and input sniffing. Common vulnerabilities—such as unauthorized clipboard capturing, drag-and-drop snooping, or screen scraping—fail closed by default, requiring explicit brokered handoffs.
 
 Fourth, **crash-proof sessions.** If your custom tiling window manager or panel shell crashes, your session does not go down. The engine continues to run, holding your active windows in their last valid visual state on the screen while your session supervisor restarts the crashed policy clients in the background.
 
