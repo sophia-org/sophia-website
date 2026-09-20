@@ -78,7 +78,7 @@ The `sophia-engine` is entirely protocol-neutral. It knows nothing of X11 resour
 
 This decoupling creates a pluggable Protocol Authority Layer. 
 
-The default translator is `sophia-x-authority`—a lightweight Rust frontend that terminates a secure subset of X11 and converts its state into engine transactions. Because the engine is agnostic, you can write and plug in any translation frontend. You could run a native Wayland frontend alongside our X11 frontend on the same display, completely side-by-side.
+The default translator is `sophia-x-authority`—a lightweight frontend that terminates a secure subset of X11 and converts its state into engine transactions. Because the engine is agnostic, you can write and plug in any translation frontend. You could run a native Wayland frontend alongside our X11 frontend on the same display, completely side-by-side.
 
 During early design, I drew inspiration from `XLibre`—a custom-patched, C-based Xorg server that prototypes X11 resource virtualization. `XLibre` remains our architectural blueprint for a heavyweight legacy compatibility provider, should application compatibility gaps ever justify its integration cost.
 
