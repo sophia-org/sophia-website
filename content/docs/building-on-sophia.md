@@ -24,7 +24,7 @@ You can ship several components together as a desktop bundle. They'll share styl
 | Window manager | Window-manager role files: snapshots in, proposals out | Works today |
 | Shell or panel | Shell role files, as UI elements or as your own pixels | Works today |
 | Tool, status reader, agent | Inspection, output and administration files | Mostly; administration hasn't moved yet |
-| Portal feature | Portal files: request, grant, bind, revoke | Works today; capture doesn't work live yet |
+| Portal feature | Portal files: request, grant, bind, revoke | Works today; mirrored capture still in testing |
 | Ordinary application | X11 through the X authority | Works today |
 | Native 9P application | The application frontend | Not yet; the contract comes first |
 | New protocol frontend | A translator that is a client of the application frontend | Open to anyone once the application frontend lands |
@@ -57,7 +57,7 @@ Permissions come from the person running the desktop, never from your config fil
 
 Clipboard, drag-and-drop, file handoff and capture all cross from one namespace to another, so they go through portals. The portal service decides whether to allow a transfer and does nothing else. Your frontend, on the receiving end, does the work. A 9P client gets one object bound into its tree for as long as the grant lasts, and if the grant is revoked, the open file answers `ESTALE`. For an X client, the X authority translates the grant into X terms. A grant opens one object. It doesn't open a namespace for browsing.
 
-Capture is the first portal, and a fair warning. It's written, but live requests time out today and it hasn't been tested on real hardware. Build against the contract, but don't promise your users screenshots yet.
+Capture is the first portal. It works on physical displays today, and lock and display changes revoke old grants. Mirrored displays are still being tested, so check the role's capabilities before you count on capture there.
 
 ## Prove it works
 

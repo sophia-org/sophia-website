@@ -52,7 +52,7 @@ That makes shared and confined sessions two different recipes rather than two di
 
 Portals are the only way across. When a clipboard selection, a drag or a screenshot has to move between namespaces, the portal service decides whether to allow it but doesn't do the work itself. The receiving side does. A 9P client gets one object bound into its tree for as long as the grant lasts; revoke the grant, and the open file starts answering `ESTALE`. An X client gets the same thing in X terms: a selection, a drag, a drop. File descriptors never travel over 9P. They take a side channel, or they don't move at all.
 
-Screen capture is the first portal. A client asks for one output and reads back a frame record and the screenshot bytes over 9P, and the lock screen refuses the request. Capture is written, but it doesn't work live yet: requests time out, and it hasn't been tested on real hardware.
+Screen capture is the first portal. A client asks for one output and reads back a frame record and the screenshot bytes over 9P, and the lock screen refuses the request. Capture works on both of my displays, and locking the screen or changing a display cuts off old grants as it should. Capturing mirrored displays still needs testing.
 
 ---
 

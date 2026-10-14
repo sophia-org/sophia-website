@@ -15,7 +15,7 @@ Namespace is now the word everything turns on. It means what a connection can re
 
 Portals change with it. The portal service decides from a few fixed facts and carries nothing out itself. The receiving frontend does that. A 9P recipient receives one object bound into its tree for the life of the grant. Revocation unbinds it, and an open file answers `ESTALE`. An X recipient receives a translation into X terms: a selection, a drag, a drop. Descriptors never travel on the 9P stream. They cross on a side channel, or they stay put.
 
-Capture goes first. One grant binds one named output into the requester's tree: a frame record and a file that returns the screenshot, up to a size limit. The session lock refuses capture, and locking cancels capture in flight. Bytes already delivered stay delivered. Revocation stops the next read. It cannot call pixels back. Capture is written, but it doesn't work live yet: requests time out, and it hasn't been tested on real hardware or measured for speed.
+Capture goes first. One grant binds one named output into the requester's tree: a frame record and a file that returns the screenshot, up to a size limit. The session lock refuses capture, and locking cancels capture in flight. Bytes already delivered stay delivered. Revocation stops the next read. It cannot call pixels back. Capture now works on both physical displays in my daily session, and locking the screen or changing a display revokes old grants on time. Capturing mirrored displays, and what that costs, still needs testing.
 
 ## What Sophia borrows from Plan 9
 
@@ -37,6 +37,6 @@ Agents turn out to be ordinary clients. An agent attaches, proves an identity an
 
 ## Where this stands
 
-The window-manager, shell, output, lock, factotum, inspection and portal roles run on the 9P core today, and the X authority and Engine run my desktop every day. Authenticated connections and per-client namespaces landed on October 12 for programs the session launches. Administration and the broker still have to move, the shared contract and the application frontend are still open, and capture still has to work live. I count each piece when it lands and passes its tests.
+The window-manager, shell, output, lock, factotum, inspection and portal roles run on the 9P core today, and the X authority and Engine run my desktop every day. Authenticated connections and per-client namespaces landed on October 12 for programs the session launches. Administration and the broker still have to move, the shared contract and the application frontend are still open, and mirrored capture still needs testing. I count each piece when it lands and passes its tests.
 
 The September posts promised pluggable frontends over socket protocols. Cross that out. The promise now reads plainer: one core, one identity proved at attach, one tree per client, and a server that checks every step.
