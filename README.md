@@ -61,7 +61,7 @@ Open **`http://127.0.0.1:1111`** in your browser. Any edits you make to the mark
 To deploy new changes to production, follow this chronological workflow:
 1. Stage your local technical content changes using `git add <file>`.
 2. Commit your edits: `git commit -m "doc: update technical specs"`
-3. Push the commits to the main branch: `git push origin main`
+3. Push the commits to the master branch: `git push origin master`
 4. Run the remote deployment command to trigger the compiler: `ssh archvps "bash /var/www/deploy-sophia.sh"`
 
 The deployment script pulls your latest commits, compiles the site using the VPS's native `zola` compiler, and serves the updated static output instantly.

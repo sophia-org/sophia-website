@@ -5,6 +5,9 @@ date = 2026-09-20
 author = "niltempus"
 +++
 
+> Historical post, September 2026. The role protocols and frontend plans below no longer describe Sophia. See "Sophia changed direction: one 9P core" (October 2026) for the current shape.
+
+
 A common critique of modular desktop design goes like this: *"You claim to follow the Unix philosophy, yet Sophia contains a compositor. Isn't a compositor too complex, too unified to be a simple Unix tool?"*
 
 It is a fair question, but it rests on a misunderstanding of what a compositor actually is—and what traditional display servers have bloated it into.

@@ -5,6 +5,9 @@ date = 2026-09-18
 author = "niltempus"
 +++
 
+> Historical post, September 2026. The role protocols and frontend plans below no longer describe Sophia. See "Sophia changed direction: one 9P core" (October 2026) for the current shape.
+
+
 The X11 protocol was designed for cooperation, not security. Its flexible, asynchronous design allows clients to share window properties, grab inputs, and read each other’s resources. But this trust creates significant liabilities: any client can inspect neighboring pixels or grab keystrokes, and asynchronous resizing causes severe display tearing. Wayland solved these security issues but introduced severe desktop fragmentation and created a monolithic, fragile compositor loop.
 
 To solve these historical bottlenecks, I am launching `sophia.gg` to document `sophia-engine 0.1.0`—an experimental, transaction-driven display server and compositor that decouples desktop policy.

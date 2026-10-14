@@ -5,6 +5,9 @@ date = 2026-09-19
 author = "niltempus"
 +++
 
+> Historical post, September 2026. The role protocols and frontend plans below no longer describe Sophia. See "Sophia changed direction: one 9P core" (October 2026) for the current shape.
+
+
 Binding a display server's core compositor directly to a single application wire protocol introduces structural lock-in. If you run X11, your display server is a massive, monolithic interpreter that manages drivers, composition, inputs, and client state in a single, un-sandboxed address space. If you run Wayland, your compositor is a different kind of monolith, forcing layout calculation, presentation timing, display driving, and status rendering into one fragile execution loop. Supporting a new protocol requires rebuilding the display server or writing massive, intrusive translation layers.
 
 To break this coupling, I have built `sophia-engine 0.1.0` around a different premise: the graphics engine should be a protocol-neutral visual kernel.
