@@ -11,7 +11,7 @@ Sophia is experimental, and native applications can't use it yet, because the sh
 
 ## Start from your namespace
 
-Your component doesn't open a private socket with its own protocol. It attaches to the core, proves who it is, and gets a socket directory with one endpoint for each role it may use, plus a discovery file that lists them. The tree at each endpoint is everything you've been granted. The server checks every attach, walk, open, read and write, so if your code reaches for a tree it wasn't given, the server stops it. Good manners have nothing to do with it.
+Your component doesn't open a private socket with its own protocol. It attaches to the core, proves who it is, and gets a socket directory with one endpoint for each role it may use, plus a discovery file that lists them. The tree at each endpoint is everything you've been granted. The server checks every attach, walk, open, read and write, so if your code reaches for a tree it wasn't given, the server stops it.
 
 A small command is a line written to a `ctl` file, and state comes back from a `status` file. Frame-rate traffic uses compact binary records. Each file has one grammar and one version. If you can't parse a line completely, reject it.
 
@@ -35,7 +35,7 @@ Your window manager keeps its own layout model, whether that's a tiling tree, sc
 
 Your window manager never sees titles, process IDs, clipboard contents or pixels, and it never learns which namespace a node belongs to. It registers named actions. The session matches shortcuts to them and decides what, if anything, a launch request starts, so your window manager never needs to know a program's path.
 
-Start small: one window, placed. Add focus and workspaces once the snapshot-and-proposal loop survives a restart of your own process.
+Start with a window manager that places one window. Add focus and workspaces once the snapshot-and-proposal loop survives a restart of your own process.
 
 ## Write a shell
 
@@ -55,11 +55,11 @@ Permissions come from the person running the desktop, never from your config fil
 
 ## Move data through portals
 
-Clipboard, drag-and-drop, file handoff and capture all cross from one namespace to another, so they go through portals. The portal service decides whether to allow a transfer and does nothing else. Your frontend, on the receiving end, does the work. A 9P client gets one object bound into its tree for as long as the grant lasts, and if the grant is revoked, the open file answers `ESTALE`. For an X client, the X authority translates the grant into X terms. A grant opens one object. It doesn't open a namespace for browsing.
+Clipboard, drag-and-drop, file handoff and capture all cross from one namespace to another, so they go through portals. The portal service decides whether to allow a transfer and does nothing else. Your frontend, on the receiving end, does the work. A 9P client gets one object bound into its tree for as long as the grant lasts, and if the grant is revoked, the open file answers `ESTALE`. For an X client, the X authority translates the grant into X terms. A grant opens one object, not a whole namespace.
 
 Capture is the first portal. It works on physical displays today, and lock and display changes revoke old grants. Mirrored displays are still being tested, so check the role's capabilities before you count on capture there.
 
-## Prove it works
+## Testing
 
 Negotiate the role version and read the answer. Treat a refusal as a normal result, not an error. Track connection epochs and record identities, so a late reply from a dead connection can't affect the one that replaced it.
 
@@ -67,4 +67,4 @@ Test the normal exchange first, then the failures: malformed records, full queue
 
 ## Assemble a desktop
 
-Pick a window manager, add a shell, set up the session's actions and ship your applications. One repository or several, the boundaries stay the same. Start with the smallest piece that does one thing: a window manager that places one window, or a shell that shows one image and takes it down again. Build on it once version negotiation, refusals and shutdown all behave.
+Pick a window manager, add a shell, set up the session's actions and ship your applications. The boundaries are the same whether you use one repository or several. Start with the smallest piece that does one thing: a window manager that places one window, or a shell that shows one image and takes it down again. Build on it once version negotiation, refusals and shutdown all behave.

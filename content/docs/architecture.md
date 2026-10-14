@@ -92,4 +92,4 @@ Sophia divides the desktop by who may do what. The window-manager, shell, output
 
 ## Wayland
 
-There's no Wayland frontend in the diagram because none is planned. Someone else could write one as a 9P client of the application frontend, carrying its clients as sub-identities, each with its own tree. That door stays open. Sophia isn't promising to walk through it.
+There's no Wayland frontend in the diagram because none is planned. Someone else could write one as a 9P client of the application frontend, carrying its clients as sub-identities, each with its own tree. Nothing stops someone from writing one, but I'm not planning to.
