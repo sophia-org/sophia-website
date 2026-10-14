@@ -1,6 +1,6 @@
 title = "Sophia"
 base_url = "https://sophia.gg"
-description = "A visual desktop kernel shaped by Plan 9, with a first-class X11 frontend."
+description = "A desktop shaped by Plan 9, with a native X11 server."
 default_language = "en"
 compile_sass = false
 minify_html = true

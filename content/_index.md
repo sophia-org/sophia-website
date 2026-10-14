@@ -5,13 +5,13 @@ template = "index.html"
 
 # Sophia by niltempus
 
-Sophia takes its shape from Plan 9: one file protocol for every public role, a namespace composed for each identity, and identity proved at attach. One 9P core serves those roles. Nothing else grants reach.
+Sophia is a desktop built on an idea from Plan 9: every client gets its own view of the system, and the server checks every step it takes. Window managers, panels, the screen lock and the rest of the desktop all talk to Sophia over one file protocol, 9P. Each client sees only the files it has been granted, and it proves who it is when it connects.
 
-The monolith desktop is a problem. A traditional compositor puts layout, composition, input routing and panels in one process. The window manager crashes, the session and its applications die with it. X11 avoids that trap and falls into another: every client can read every other client's windows, clipboard and keystrokes. Sophia separates layout policy from composition and restricts what clients can access across namespaces.
+I started Sophia because I didn't like either of the usual choices. A traditional compositor puts layout, drawing, input routing and panels in one process, so when the window manager crashes, your session and every open application go down with it. X11 avoids that trap and falls into another: any client can read any other client's windows, clipboard and keystrokes. Sophia keeps layout policy out of the compositor, and it keeps clients out of each other's business.
 
 ---
 
-## The Shape
+## The shape
 
 ```text
   X11 clients            9P clients: window manager · shells · output
@@ -34,54 +34,54 @@ The monolith desktop is a problem. A traditional compositor puts layout, composi
                    DRM / KMS
 ```
 
-Engine owns physical input, the scene graph, visual commits, rendering and scanout. It knows no client protocol. It takes in admitted transactions and hands back routed input, outcomes and topology.
+Engine sits at the bottom. It owns the input devices, the scene graph, rendering and the display, and it doesn't speak any client protocol. It accepts transactions that have already been checked, and it sends back input, results and changes to the display layout.
 
-The X authority is a first-class frontend, written from scratch in Rust. It handles X11 connections, keys each resource by namespace, checks every request, and turns what survives into engine transactions. The 9P application authority will do the same work for native clients as an export on the core. Both will feed Engine through one contract, to be named once; that work is still open.
+Above Engine are the frontends. The X authority is Sophia's X server, which I wrote from scratch in Rust. It accepts X11 connections, keeps each client's resources inside its namespace, checks every request, and turns whatever passes into transactions for Engine. A native 9P frontend will do the same job for applications written for Sophia. Both will reach Engine through one shared contract. That contract isn't written yet.
 
-The desktop roles run beside them as exports on the core: window manager, shells, output, screen lock, factotum, read-only inspection and the portal files. Administration and the metadata broker still run on the old socket envelope and migrate last. A role is a file tree with a grammar. Small controls take a line written to a `ctl` file, and state returns as a line from a `status` file. Window-manager and shell traffic keeps its compact binary records. The old per-role socket protocols go away.
+The desktop roles sit beside them on the 9P core: window manager, shells, output, screen lock, factotum (which holds keys and proves identity), read-only inspection, and portals. Each role is a small file tree. You send a command by writing a line to its `ctl` file, and you read its state as a line from its `status` file. The window manager and shells run at frame rate, so their traffic stays in compact binary records. Two services, administration and the metadata broker, still use the old socket protocol and will move over last.
 
-A window update traces a short path. The application draws. Its authority translates and checks. The window manager proposes a layout from opaque nodes. Engine validates, commits geometry and pixels together, and page-flips. No half-settled state reaches the screen.
-
----
-
-## Namespaces, Composed
-
-A namespace is what a connection can reach. Attach proves identity through factotum and fixes it for the life of the connection. The server derives the client's tree from that identity and its grants. The client never builds the tree and cannot edit it. The server checks attach, walk, open, and every operation on an open file. Hiding a path proves nothing. The check is the authority.
-
-Shared and confined sessions become two recipes, not two code paths. A trusted terminal and a confined browser hold different trees. The browser cannot name the terminal's windows, let alone read them. Cross-namespace lookups fail closed.
-
-Portals are the only edge between namespaces, and they work as binds. The portal export decides on bounded facts and executes nothing. The recipient's frontend does the work: a 9P recipient gets one object bound into its tree for the life of the grant, and revocation makes the open file answer `ESTALE`. An X recipient gets a translation into X semantics — a selection, a drag, a drop. Descriptors never ride the 9P stream. They cross on a side channel, or they do not cross.
-
-The first bind is capture: one named output, a frame record, and bounded screenshot bytes read over 9P. The session lock refuses it. Capture is implemented, but it is not qualified yet: live requests currently time out, and physical and performance qualification remain unfinished.
+Here's what happens when a window changes. The application draws. Its frontend translates the request and checks it. The window manager sees an anonymous node and proposes where it should go. Engine checks the proposal, commits the new geometry and the new pixels together, and flips the page. You never see a frame where one has arrived without the other.
 
 ---
 
-## Frontends: X11 First, 9P Native
+## Namespaces
 
-X11 is not a compatibility shim. It is a supported frontend with its own authority, admission and resource checks, in new Rust code. X clients keep their socket, DRI3 descriptors and shared memory. The 9P work changes nothing for them.
+A namespace is everything a connection can reach. When a client connects, it proves its identity through factotum, and that identity holds for as long as the connection lasts. The server builds the client's file tree from the identity and whatever it has been granted. The client can't build the tree or change it. Then the server checks every step: connecting, walking to a path, opening a file, and every read or write after that. Hiding a path isn't security. The check is.
 
-The native path is 9P. Window managers, shells, services and applications built for Sophia speak to the core and receive composed trees. An agent is an ordinary client on that path: it reads status files, writes one-line commands and asks for portal grants. Sophia builds nothing agent-specific. Observer, operator and driver are grant recipes, not ranks, and none inherits from another.
+That makes shared and confined sessions two different recipes rather than two different code paths. A trusted terminal and a confined browser get different trees. The browser can't even name the terminal's windows, let alone read them, and any lookup that crosses namespaces fails.
 
-Wayland is possible through the same contract. It is not on the roadmap. Another developer can write a Wayland compatibility layer as a 9P client of the application authority and carry its clients as sub-identities. I will write one myself only if the need becomes unavoidable.
+Portals are the only way across. When a clipboard selection, a drag or a screenshot has to move between namespaces, the portal service decides whether to allow it but doesn't do the work itself. The receiving side does. A 9P client gets one object bound into its tree for as long as the grant lasts; revoke the grant, and the open file starts answering `ESTALE`. An X client gets the same thing in X terms: a selection, a drag, a drop. File descriptors never travel over 9P. They take a side channel, or they don't move at all.
 
-What Sophia did not take matters as much. No draw protocol. No kernel mounts as authority. No descriptors inside protocol replies. The borrow is the namespace and the small file interface, set over a transactional compositor.
+Screen capture is the first portal. A client asks for one output and reads back a frame record and the screenshot bytes over 9P, and the lock screen refuses the request. Capture is written, but it doesn't work live yet: requests time out, and it hasn't been tested on real hardware.
 
 ---
 
-## What This Buys
+## X11 first, 9P native
 
-Confinement that fails closed. A confined client cannot inspect a neighbour it cannot name. Clipboard, drag-and-drop and capture cross only as grants, executed by the recipient, revoked mid-task.
+X11 isn't a compatibility layer here. It's a full frontend with its own checks, written fresh in Rust. X clients keep their socket, DRI3 and shared memory, and none of the 9P work changes anything for them.
 
-Sessions that survive their parts. A shell or window manager crashes; Engine keeps the last committed frame on screen while the supervisor restarts the part.
+New software takes the 9P path. Window managers, shells, services and, later, applications written for Sophia talk to the core and get their own file trees. Agents are ordinary clients on that path: they read status files, write one-line commands and ask for portal grants like anyone else. Sophia builds nothing special for them. Observer, operator and driver are three separate sets of grants, not levels, and none of them includes another.
 
-One place to check. Attach fixes identity, the composed tree bounds reach, and every later operation meets the same checks over X11 or 9P.
+Wayland could run on the same contract, but it isn't on the roadmap. Someone could write a Wayland layer as a 9P client of the application frontend and carry its clients as sub-identities. I'll only write one myself if I run out of other options.
 
-A small surface to build on. Read a discovery file, open a role tree, write a line to `ctl`. A shell script can drive the desktop. So can a window manager.
+What Sophia leaves out of Plan 9 matters as much as what it takes. There's no draw protocol, because Engine already does the drawing. Kernel mounts aren't a security boundary. Protocol replies never carry file descriptors. What Sophia borrows is the namespace and the small file interface, laid over a compositor that commits whole frames.
+
+---
+
+## What you get
+
+Confinement that fails safe. A confined client can't inspect a neighbor it can't name. The clipboard, drag-and-drop and capture cross only through grants, and a grant can be pulled mid-task.
+
+A session that outlives its parts. If a shell or the window manager crashes, Engine keeps the last frame on screen while the supervisor restarts it.
+
+One set of checks. Identity is fixed when a client connects, its tree limits what it can reach, and every request after that meets the same checks, whether it arrives over X11 or 9P.
+
+Something small to build on. Read a discovery file, open a role's tree, write a line to `ctl`. A shell script can drive the desktop. So can a window manager.
 
 ## Status
 
-The X authority and Engine run the daily session. The window-manager, shell, output, lock, factotum, inspection and portal roles serve as exports on the core; the portal files exist, and whether they pass on physical hardware is a separate question. Administration and the broker still run on the old socket envelope. Authenticated attach and namespace composition landed on 12 October for the admitted launch paths. The protocol authority contract and the application authority rebuild remain open. Capture is implemented, but it is not qualified yet. Each piece counts as shipped when it lands and passes its gate, not before.
+The X authority and Engine run my desktop every day. The window-manager, shell, output, lock, factotum, inspection and portal roles all run on the 9P core, though the portals still need testing on real hardware. Administration and the metadata broker still use the old socket protocol. Authenticated connections and per-client namespaces landed on October 12 for programs the session launches. The shared contract between the frontends and Engine is still open, and so is the native application frontend. I count a piece as done when it lands and passes its tests, not before.
 
-No monolith. No ambient trust. A tree per identity, and a server that checks.
+No monolith, no ambient trust: one tree per identity, and a server that checks every step.
 
 ---

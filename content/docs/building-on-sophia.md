@@ -5,66 +5,66 @@ weight = 2
 version = "0.1.0"
 +++
 
-You can build a window manager, a panel, a launcher or a whole desktop on Sophia. Engine handles physical input, composition and display output. Your component works through the role files the 9P core serves to its namespace. Ordinary applications use X11 today.
+You can build a window manager, a panel, a launcher or a whole desktop on Sophia. Engine takes care of input, compositing and the display. Your component talks to Sophia through the role files the 9P core gives it. Ordinary applications use X11 for now.
 
-Sophia is experimental, and the native application path is not open yet: the shared protocol authority contract and the application authority rebuild remain unfinished. Build against the window-manager, shell, inspection and portal contracts that run now. Check each role's version and capabilities before you depend on a feature.
+Sophia is experimental, and native applications can't use it yet, because the shared contract and the application frontend aren't finished. Build against the window-manager, shell, inspection and portal roles that work today, and check each role's version and capabilities before you rely on a feature.
 
-## Start From Your Namespace
+## Start from your namespace
 
-Your component does not open a private protocol socket. It attaches to the core, proves its identity, and receives a socket directory with one endpoint per role it may use and a discovery file that names them. The tree at each endpoint is the whole grant. The server checks attach, walk, open and every operation on an open file, so code for a tree you were not granted fails at the server, not by convention.
+Your component doesn't open a private socket with its own protocol. It attaches to the core, proves who it is, and gets a socket directory with one endpoint for each role it may use, plus a discovery file that lists them. The tree at each endpoint is everything you've been granted. The server checks every attach, walk, open, read and write, so if your code reaches for a tree it wasn't given, the server stops it. Good manners have nothing to do with it.
 
-Small controls take a line to a `ctl` file and return state from a `status` file. Traffic on the frame path keeps compact binary records. Each file has one grammar and one version. Parse nothing partially.
+A small command is a line written to a `ctl` file, and state comes back from a `status` file. Frame-rate traffic uses compact binary records. Each file has one grammar and one version. If you can't parse a line completely, reject it.
 
-A desktop bundle can ship several components together. Bundling buys shared styling and configuration. It buys no shared authority: each component still attaches with its own identity and its own tree.
+You can ship several components together as a desktop bundle. They'll share styling and configuration, but not permissions: each component still attaches with its own identity and gets its own tree.
 
-## Choose What to Build
+## Choose what to build
 
-| Component | Boundary | Where it stands |
+| Component | What it talks to | Status |
 | :-- | :-- | :-- |
-| Window manager | Window-manager role files: snapshots in, proposals out | Running |
-| Shell or panel | Shell role files, as descriptors or as your own pixels | Running |
-| Tool, status reader, agent | Inspection, output and administration files | Running in part; administration still migrates |
-| Portal feature | Portal files: request, grant, bind, revoke | Portal export running; capture not yet qualified |
-| Ordinary application | X11 through the X authority | Running |
-| Native 9P application | Application authority export | Not yet; the contract comes first |
-| New protocol frontend | A translator client of the application authority | Open to third parties once the authority lands |
+| Window manager | Window-manager role files: snapshots in, proposals out | Works today |
+| Shell or panel | Shell role files, as UI elements or as your own pixels | Works today |
+| Tool, status reader, agent | Inspection, output and administration files | Mostly; administration hasn't moved yet |
+| Portal feature | Portal files: request, grant, bind, revoke | Works today; capture doesn't work live yet |
+| Ordinary application | X11 through the X authority | Works today |
+| Native 9P application | The application frontend | Not yet; the contract comes first |
+| New protocol frontend | A translator that is a client of the application frontend | Open to anyone once the application frontend lands |
 
-## Write a Window Manager
+## Write a window manager
 
-A window manager keeps its own layout model — tiling tree, scrolling columns, workspaces — and keeps it private. Engine prescribes none of it. The exchange runs in a loop. The core serves a snapshot of opaque nodes. Your manager reads the geometries, updates its model, and writes a layout and focus proposal. Engine validates the bounds and commits geometry and pixels together. While your manager is down or restarting, Engine holds the last committed frame.
+Your window manager keeps its own layout model, whether that's a tiling tree, scrolling columns or workspaces, and keeps it to itself. Engine doesn't impose one. The exchange is a loop. The core hands you a snapshot of anonymous nodes. You read their sizes and positions, update your model, and write back a proposal for layout and focus. Engine checks the bounds and commits geometry and pixels together. If your window manager goes down or restarts, Engine keeps the last frame on screen until it's back.
 
-Your manager never sees titles, process IDs, clipboard contents or pixels, and it never learns which namespace a node came from. It registers named actions; the session owns shortcut matching and decides what, if anything, a launch request starts. Your manager never needs an executable path.
+Your window manager never sees titles, process IDs, clipboard contents or pixels, and it never learns which namespace a node belongs to. It registers named actions. The session matches shortcuts to them and decides what, if anything, a launch request starts, so your window manager never needs to know a program's path.
 
-Start with one window, placed. Add focus and workspaces after the snapshot-and-proposal loop survives a restart of your own process.
+Start small: one window, placed. Add focus and workspaces once the snapshot-and-proposal loop survives a restart of your own process.
 
-## Write a Shell
+## Write a shell
 
-Two models run on the shell role files. Each needs server support and an operator grant.
+A shell can work in one of two ways. Both need server support and an operator grant.
 
-In the descriptor model, your shell picks from UI elements Engine knows how to draw. You receive authorised descriptors, choose order and selection, and return a candidate. Engine renders it and reports actions on the targets it presented. Switchers and launchers fit here, and your client ships no rendering stack.
+In the first, your shell picks from UI elements Engine already knows how to draw. You receive the elements you're allowed to use, choose their order and what's selected, and send back your choice. Engine draws it and tells you when someone acts on what it showed. Switchers and launchers fit this model well, and your shell needs no rendering code of its own.
 
-In the content model, your shell draws. It rasterizes its widgets, submits the pixels with the matching interaction targets, and Engine controls placement, clipping, composition and input. Keep the phases apart in your code: allocation grants bounds, upload moves bytes into the renderer's store, presentation means the frame reached scanout, and release ends the store's custody. An accepted upload is not a presentation. Do not free a resource on close while the renderer still holds it, and apply the same care on cancel and disconnect.
+In the second, your shell draws its own widgets. It renders them, submits the pixels along with the areas that respond to input, and Engine handles placement, clipping, compositing and input. Keep four stages apart in your code. Allocation gives you a size. Upload copies your pixels into the renderer. Presentation means the frame reached the screen. Release means the renderer no longer holds your pixels. An accepted upload hasn't been shown yet. Don't free a buffer on close while the renderer still holds it, and take the same care when you cancel or disconnect.
 
-Presenting a panel grants no pixels beyond your own surface. A screenshot needs a portal grant, not a read of the screen.
+Drawing a panel gives you no pixels outside your own surface. If you want a screenshot, ask for a portal grant; you can't just read the screen.
 
-## Configure the Desktop
+## Configure the desktop
 
-The desktop profile at `~/.config/sophia/desktop.kdl` — or `sophia/desktop.kdl` under `XDG_CONFIG_HOME` — selects components and sets their permissions. Your component keeps its own preferences: fonts, colours, layout vocabulary. The profile can carry settings for the selected window manager, and that manager validates them.
+The desktop profile lives at `~/.config/sophia/desktop.kdl`, or at `sophia/desktop.kdl` under `XDG_CONFIG_HOME`. It picks the components and sets their permissions. Your component keeps its own preferences, such as fonts, colors and layout options. The profile can also carry settings for the chosen window manager, and the window manager checks them itself.
 
-Permissions come from the operator, never from your config file. A panel may ask for forty pixels along an edge; Engine checks the ask against the profile allowance. Editing your own settings cannot widen it.
+Permissions come from the person running the desktop, never from your config file. A panel can ask for forty pixels along a screen edge, and Engine checks that against what the profile allows. Changing your own settings can't raise the limit.
 
-## Move Data Through Portals
+## Move data through portals
 
-Clipboard, drag-and-drop, file handoff and capture cross namespace edges, so they go through portal files. The portal export decides on bounded facts and executes nothing. Your frontend, as recipient, does the work: for a 9P client, one object binds into your tree for the life of the grant, and revocation makes an open file answer `ESTALE`. For an X client, the X authority translates the grant into X terms. A grant opens one object. It opens no namespace to inspection.
+Clipboard, drag-and-drop, file handoff and capture all cross from one namespace to another, so they go through portals. The portal service decides whether to allow a transfer and does nothing else. Your frontend, on the receiving end, does the work. A 9P client gets one object bound into its tree for as long as the grant lasts, and if the grant is revoked, the open file answers `ESTALE`. For an X client, the X authority translates the grant into X terms. A grant opens one object. It doesn't open a namespace for browsing.
 
-Capture is the first bind and the honest warning. The mechanism is implemented; live requests time out today, and physical qualification is unfinished. Build against the contract. Do not promise screenshots.
+Capture is the first portal, and a fair warning. It's written, but live requests time out today and it hasn't been tested on real hardware. Build against the contract, but don't promise your users screenshots yet.
 
-## Prove It
+## Prove it works
 
-Negotiate the role version and read the result. Handle refusal as a normal outcome. Track connection epochs and record identities so a reply from a dead connection cannot move its replacement.
+Negotiate the role version and read the answer. Treat a refusal as a normal result, not an error. Track connection epochs and record identities, so a late reply from a dead connection can't affect the one that replaced it.
 
-Test the plain exchange first, then the failures: malformed records, full queues, slow replies, disconnects, revoked grants and restarts. A refused write leaves the operation yours; a taken write leaves you tracking its outcome, not sending a second copy. Keep protocol tests off hardware. A socket test can prove ordering and ownership. It cannot prove a frame reached a panel.
+Test the normal exchange first, then the failures: malformed records, full queues, slow replies, disconnects, revoked grants and restarts. If the server refuses a write, the operation is still yours to retry or drop. If it accepts one, don't send it again; wait for the result. Keep protocol tests off real hardware. A socket test can prove ordering and ownership, but it can't prove a frame reached a panel.
 
-## Assemble a Desktop
+## Assemble a desktop
 
-Pick a window manager, supply a shell, configure the session actions, ship applications. One repository or several makes no difference to the boundaries. Start with the smallest component that does one thing: a manager that places a window, a shell that presents and retires one image. Extend it after negotiation, refusal and teardown behave.
+Pick a window manager, add a shell, set up the session's actions and ship your applications. One repository or several, the boundaries stay the same. Start with the smallest piece that does one thing: a window manager that places one window, or a shell that shows one image and takes it down again. Build on it once version negotiation, refusals and shutdown all behave.

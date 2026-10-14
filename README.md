@@ -1,16 +1,16 @@
 # Sophia Website (`sophia.gg`)
 
-This repository contains the source code, layouts, and technical writings for the official website of the Sophia display server:
+The source for the Sophia website:
 
 👉 **[sophia.gg](https://sophia.gg)**
 
-The site is designed to be extremely lightweight, objective, and fast, honoring the technical aesthetics of the systems hacking community.
+It's a small static site: plain text, one stylesheet, no JavaScript framework.
 
 ---
 
 ## Technical Design
 
-I build the site using `zola` (v0.18.0 or greater), a single-binary static site generator written in Rust, allowing the entire site to compile in under 30 milliseconds. To maintain a lightweight initial page weight of under 10KB, I use a single, handcrafted, zero-dependency stylesheet (`static/style.css`) with system-native fonts and an automatic dark/light theme toggle. The aesthetic is inspired by the minimalist, text-centric layout of systems blogs such as `isaacfreund.com`, prioritizing high contrast and readable typography.
+I build the site with `zola` (0.18.0 or later), a single-binary static site generator written in Rust. The whole site builds in about 30 milliseconds. There's one hand-written stylesheet, `static/style.css`, with system fonts and automatic light and dark themes, which keeps the first page load under 10 KB. The look borrows from plain-text systems blogs like `isaacfreund.com`: high contrast and easy reading.
 
 ---
 
@@ -18,25 +18,25 @@ I build the site using `zola` (v0.18.0 or greater), a single-binary static site 
 
 ```text
 sophia-website/
-├── config.toml         # Site configuration & menu navigation
+├── config.toml         # Site settings and menu
 ├── static/
-│   └── style.css       # Zero-dependency minimalist theme
-├── templates/          # Reusable HTML template frame and layouts
+│   └── style.css       # The one stylesheet
+├── templates/          # Page templates
 │   ├── base.html       # Shared layout skeleton
-│   ├── index.html      # Flowing text homepage
-│   ├── page.html       # Individual post & doc viewer
-│   └── section.html    # Index of blog posts and documentation
+│   ├── index.html      # Home page
+│   ├── page.html       # Single post or doc
+│   └── section.html    # Blog and docs listings
 └── content/            # Markdown articles & guides
     ├── _index.md       # Homepage copy
-    ├── docs/           # Technical manuals and guides
-    └── blog/           # Technical diaries and announcements
+    ├── docs/           # Documentation
+    └── blog/           # Blog posts
 ```
 
 ---
 
 ## Local Development
 
-To test and preview the website on your laptop, install `zola` (v0.18.0 or greater):
+To preview the site, install `zola` 0.18.0 or later:
 
 ```bash
 # Arch Linux
@@ -52,16 +52,17 @@ Run the `zola` watch server:
 zola serve
 ```
 
-Open **`http://127.0.0.1:1111`** in your browser. Any edits you make to the markdown, stylesheets, or layouts will auto-reload in real-time.
+Open **`http://127.0.0.1:1111`**. The page reloads whenever you change the Markdown, the stylesheet or a template.
 
 ---
 
 ## Deployment
 
-To deploy new changes to production, follow this chronological workflow:
-1. Stage your local technical content changes using `git add <file>`.
-2. Commit your edits: `git commit -m "doc: update technical specs"`
-3. Push the commits to the master branch: `git push origin master`
-4. Run the remote deployment command to trigger the compiler: `ssh archvps "bash /var/www/deploy-sophia.sh"`
+Commit your changes, push them to `master`, then run the deploy script on the server:
 
-The deployment script pulls your latest commits, compiles the site using the VPS's native `zola` compiler, and serves the updated static output instantly.
+```bash
+git push origin master
+ssh archvps "bash /var/www/deploy-sophia.sh"
+```
+
+The script pulls the latest commits, builds the site with the server's `zola` and serves the new output.

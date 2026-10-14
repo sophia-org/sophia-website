@@ -4,7 +4,7 @@
 <section>
   {{ section.content | safe }}
 
-  <h2>Recent News</h2>
+  <h2>Recent posts</h2>
   <ul class="post-list">
     {% set blog = get_section(path="blog/_index.md") %}
     {% for page in blog.pages %}
@@ -19,8 +19,8 @@
 
   <h2>Documentation</h2>
   <ul>
-    <li><a href="/docs/architecture/">Architecture Map</a> — Understanding Sophia's visual authority, decoupled window managers, and isolated client namespaces.</li>
-    <li><a href="/docs/building-on-sophia/">Building on Sophia</a> — The developer handbook for composing WMs, shells, and portals.</li>
+    <li><a href="/docs/architecture/">Architecture Map</a> — how the pieces fit and who is allowed to do what.</li>
+    <li><a href="/docs/building-on-sophia/">Building on Sophia</a> — how to write a window manager, a shell or a portal client.</li>
   </ul>
 </section>
 {% endblock content %}
