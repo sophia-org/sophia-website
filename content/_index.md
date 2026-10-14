@@ -5,7 +5,7 @@ template = "index.html"
 
 # Sophia by niltempus
 
-Sophia is a desktop built on an idea from Plan 9: every client gets its own view of the system, and the server checks every step it takes. Window managers, panels, the screen lock and the rest of the desktop all talk to Sophia over one file protocol, 9P. Each client sees only the files it has been granted, and it proves who it is when it connects.
+Sophia is a secure Linux desktop inspired by Plan 9, with atomic display transactions, a namespace for every client, and a native X11 server written in Rust. Window managers, panels, the screen lock and the rest of the desktop all talk to Sophia over one file protocol, 9P. Each client sees only the files it has been granted, and it proves who it is when it connects.
 
 I started Sophia because I didn't like either of the usual choices. A traditional compositor puts layout, drawing, input routing and panels in one process, so when the window manager crashes, your session and every open application go down with it. X11 avoids that trap and falls into another: any client can read any other client's windows, clipboard and keystrokes. Sophia keeps layout policy out of the compositor, and it keeps clients out of each other's business.
 

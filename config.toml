@@ -1,6 +1,6 @@
 title = "Sophia"
 base_url = "https://sophia.gg"
-description = "A desktop shaped by Plan 9, with a native X11 server."
+description = "A secure Linux desktop inspired by Plan 9."
 default_language = "en"
 compile_sass = false
 minify_html = true
