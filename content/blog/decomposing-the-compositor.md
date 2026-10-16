@@ -5,43 +5,38 @@ date = 2026-09-20
 author = "niltempus"
 +++
 
-> Historical post, September 2026. The role protocols and frontend plans below no longer describe Sophia. See "Sophia changed direction: one 9P core" (October 2026) for the current shape.
+A fair objection to Sophia goes like this: you praise small, separate programs, and then you build a compositor. Is a compositor not the opposite of that — one large program doing everything at once?
 
+It would be, if compositing meant everything. It does not. The word has collected jobs the way a junk drawer collects batteries, and most of the trouble people blame on compositors belongs to the extra jobs, not to the compositing.
 
-A common critique of modular desktop design goes like this: *"You claim to follow the Unix philosophy, yet Sophia contains a compositor. Isn't a compositor too complex, too unified to be a simple Unix tool?"*
+## The job itself
 
-It is a fair question, but it rests on a misunderstanding of what a compositor actually is—and what traditional display servers have bloated it into.
+Compositing, stripped down, is a scheduling job with a screen attached. Take buffers that are already drawn, put each one where it belongs, and hand the finished frame to the display through the kernel's DRM/KMS interface at the moment the hardware can take it. That is all.
 
-## The Monolithic Mess
+Somebody has to own the display and the input devices while doing it. Two programs cannot page-flip the same screen on their own schedules, and a keystroke has to go to one window, not to whichever program asks last. Engine owns the hardware for the same reason a kernel owns a disk: not to make policy, but to keep the claimants from colliding.
 
-Traditional compositors are monolithic. In the Wayland world, the compositor does everything. It manages display drivers, schedules page-flips, parses client protocols, calculates window layouts, draws panels, manages the clipboard, and routes input events. 
+## What grew around it
 
-This is not a compositor; it is an operating system masquerading as a graphics loop. When your tiling window manager crashes or a panel widget freezes, your entire session dies, taking your open applications with it. This is a monolithic failure.
+Traditional servers did not stop there. An X server grew protocol interpretation, resource tables and input policy around the drawing. A Wayland compositor grew layout, panels, locks and timing around it. The result is one process whose crash takes the session, the applications and the screen down together, and whose inner parts cannot be replaced one at a time.
 
-## The Real Job of a Compositor
+People then argue about compositors when they mean monoliths. I would rather argue about the monolith.
 
-At its core, compositing is not a policy job. It is a hardware-scheduling job. 
+## What Sophia leaves out
 
-A compositor's real responsibility is simple: take pre-rendered pixel buffers, apply spatial transformations (move, scale), and schedule page-flips onto physical displays via the kernel's DRM/KMS atomic API. 
+Engine keeps the small job and gives the rest away.
 
-This is a graphics-hardware supervisor—a **visual kernel**. 
+It speaks no client protocol. The X authority, a separate process written from scratch in Rust, parses X11, keeps each client's resources in its namespace and sends Engine checked transactions. The desktop roles — window manager, shells, output, lock, factotum, inspection and portals — reach Sophia through one shared 9P2000.L core, each with its own file tree and permissions.
 
-Like an operating system kernel, it must own the physical hardware (the screen and the input devices) to guarantee atomic composition and prevent hardware collisions. But like an operating system kernel, it should delegate policy to user space.
+It makes no layout policy. The window manager receives anonymous nodes, works out where things should go and sends back a proposal. Engine checks the proposal and commits it. The manager never sees a title, a process ID or a pixel, and it can be rewritten, or restarted, without Engine learning anything new.
 
-## Sophia's Separation of Concerns
+It draws no panels. A shell either chooses among elements Engine knows how to draw or submits its own pixels for a surface it has been given. Engine places the result and routes the clicks. Owning a panel earns a shell no view of anyone else's windows; a screenshot still takes a portal grant.
 
-Sophia enforces this separation of concerns by stripping all policy, chrome, and protocol interpretation out of the rendering core. 
+It moves no data between clients. Portals decide whether a clipboard selection or a capture may cross from one namespace to another, and the receiving frontend does the carrying. Drag-and-drop decisions exist; the native carrying does not yet.
 
-*   **No Protocol Bloat:** `sophia-engine` does not speak X11 or Wayland. It works only with abstract, anonymous buffers and damage regions. Protocol translation is delegated to independent processes like `sophia-x-authority`.
-*   **No Layout Policy:** The engine does not decide where windows go. Layout calculation is delegated to the external window manager, `Hagia`, over the `sophia_wm_v1` protocol. The window manager operates purely on anonymous spatial nodes and focus trees, remaining blind to window titles, process IDs, or application data.
-*   **No Desktop Chrome:** Status bars, panels, and launchers run as independent processes, coordinating screen-edge reservations over the `sophia_shell_v1` protocol.
+What is left in Engine is the frame: the scene, the atomic commit of geometry and pixels together, rendering and scanout. If the window manager or a shell dies, Engine holds the last complete frame on screen until the session brings the program back.
 
-The engine's compositor remains "dumb." It receives pre-calculated layout transactions and page-flips them onto the screen.
+## The kernel comparison, kept honest
 
-## Reclaiming the Unix Philosophy
+Calling Engine a visual kernel is an analogy, and analogies earn their keep only if you state where they stop. Engine is not a kernel. It does not schedule your programs or manage your memory. The comparison is about the division of labour. A kernel owns the hardware and refuses, on the whole, to care what the programs above it are for. Engine owns the screen and the input devices and refuses to care which protocol a window arrived by or what its title says.
 
-In Unix, we do not accuse the operating system kernel of violating the Unix philosophy just because it manages both memory mapping and disk writes. Those are low-level hardware enablement primitives. The kernel manages the raw hardware resources, while user-space programs handle the policy.
-
-`sophia-engine` is the visual kernel of the desktop. It manages the display hardware and input devices, while delegating layout, presentation, and protocol parsing to specialized, independent, sandboxed programs.
-
-By decomposing the compositor, Sophia proves that we can have near-native GPU composition and uncompromised desktop security without resorting to a fragile, monolithic loop.
+Write the compositor that way and it stops being a monolith with better marketing. It becomes the piece at the bottom that everything else can afford to lose, restart or replace — because the frame stays up while they do it.

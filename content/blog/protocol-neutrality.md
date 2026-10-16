@@ -1,40 +1,32 @@
 +++
-title = "Beyond X11 and Wayland: Building a Protocol-Neutral Visual Kernel"
+title = "Engine speaks no client protocol"
 date = 2026-09-19
 [extra]
 author = "niltempus"
 +++
 
-> Historical post, September 2026. The role protocols and frontend plans below no longer describe Sophia. See "Sophia changed direction: one 9P core" (October 2026) for the current shape.
+Tie a compositor to one application protocol and the two grow together. An X server collects drivers, client state, input routing and composition in one unsupervised address space. A Wayland compositor collects layout, panels, presentation timing and display driving in one loop. In both cases a new protocol means surgery on the program that keeps the screen alive, and I did not want to build that program twice.
 
+So Sophia's Engine starts from a narrower premise. Engine speaks no client protocol at all.
 
-Binding a display server's core compositor directly to a single application wire protocol introduces structural lock-in. If you run X11, your display server is a massive, monolithic interpreter that manages drivers, composition, inputs, and client state in a single, un-sandboxed address space. If you run Wayland, your compositor is a different kind of monolith, forcing layout calculation, presentation timing, display driving, and status rendering into one fragile execution loop. Supporting a new protocol requires rebuilding the display server or writing massive, intrusive translation layers.
+## What Engine knows
 
-To break this coupling, I have built `sophia-engine 0.1.0` around a different premise: the graphics engine should be a protocol-neutral visual kernel.
+Engine knows buffers, damage, geometry and timing. It owns the input devices and the display, keeps the scene graph, commits a window's new size and its new pixels together, renders the result and schedules the page-flip through DRM/KMS. It has never heard of an X window hierarchy, an atom, a selection or a grab. Those belong to somebody else, and in Sophia they do.
 
-## The Evolution: Designing the Sophia Engine
+That ignorance is the point. A resize, a new buffer and a request for the next frame mean the same thing to Engine no matter which program sent them or how the request arrived. The protocol lives outside, where it can be checked, refused and restarted without touching the frame on screen.
 
-In the early design phases, I looked deeply at `XLibre` (a custom-patched, C-based fork of Xorg prototyping X11 resource virtualization) and standard Wayland compositors. But I was deeply frustrated by the architectural layout of both. Traditional X11 display servers are massive, un-sandboxed monoliths, while Wayland has devolved into a design-by-committee ethos with half-baked, highly fragmented protocols that force basic desktop coordination into fragile, monolithic compositor loops.
+## Who speaks for the clients
 
-I wanted a highly modular, robust display stack built completely from scratch. Rather than aligning with any language hype, I used the best language and tools available for a secure, asynchronous system—and Rust happened to fit that mold perfectly for this application. So, instead of patching legacy code or copying Wayland's design, I built Sophia.
+The X authority speaks X11. It is a new server, written from scratch in Rust, and it is a full frontend rather than a compatibility layer. It accepts the classic socket, keeps each client's resources inside that client's namespace, checks the request and passes what survives to Engine as a transaction. X clients keep their DRI3 descriptors and shared memory. The server implements part of X11 today, and compatibility work is still going on. None of that reaches Engine in X's own terms.
 
-On July 8, 2026, I made an architectural cutover to establish our permanent model:
-*   I reframed the entire display stack around `sophia-engine 0.1.0` as the permanent visual and input authority.
-*   I built a graphics kernel that understands only abstract, anonymous visual transactions: buffers, damage regions, and spatial transformations.
-*   I exposed a protocol-neutral `SurfaceContentStream` that leaves application-facing parsing to independent processes.
+The desktop roles speak 9P, and they are not frontends. The window manager, the shells, output, the screen lock, factotum, read-only inspection and the portals each hold one export on a single 9P2000.L core, with its own endpoint, file tree and permissions. They share the server code, the identity model and one firm rule: no file descriptors in the 9P stream, ever. Descriptors cross on a separate channel.
 
-The core engine has no knowledge of X11 window hierarchies, atoms, selections, or grab states, nor does it speak Wayland. It performs page-flips via the DRM/KMS atomic API and manages input routing at the hardware level, maintaining a strict security boundary.
+A native application frontend will speak 9P as well, once the shared contract between the frontends and Engine is written. That contract is the real boundary. Today's X wiring is its first user, not the contract itself, and until the contract exists there is no second frontend to plug in. I am not going to pretend otherwise in the diagram.
 
-## The Pluggable Protocol Layer
+## What this does not promise
 
-By stripping protocol complexity out of the graphics kernel, I established a clean, pluggable Protocol Authority Layer. Sophia’s default translator is `sophia-x-authority 0.1.0`, a lightweight X11 subset parser. It intercepts classic X11 sockets, handles resource management, and translates client requests into anonymous engine transactions.
+It does not promise a Wayland frontend. There is none, and I am not planning one. When the application frontend lands, someone else can write a Wayland layer as a 9P client of it and carry each Wayland client as a sub-identity with its own tree. That is a door left open, not work on my list.
 
-Because the engine’s transaction boundaries are protocol-neutral, this frontend is entirely replaceable:
+Nor does it promise that a new protocol costs a weekend. A frontend still has to keep its clients' resources straight, check every request against the right namespace and turn the results into honest transactions. Engine's neutrality removes the need to rebuild the compositor. It does not remove the need to write the frontend.
 
-*   **Multi-Protocol Coexistence:** A developer can write a native Wayland frontend and run it side-by-side with our X11 frontend on the same display. The engine composites both X11 and Wayland surfaces onto the same screen, completely oblivious to which application spoke which protocol.
-*   **The XLibre Fallback:** If legacy applications ever require complex X11 extensions not yet supported in my secure frontend, the architecture allows us to run `XLibre` in a sandboxed container as an optional, heavyweight legacy provider.
-*   **Future-Proofing:** Implementing a new display protocol tomorrow requires writing a lightweight frontend translator rather than rebuilding the entire compositor from scratch.
-
-This separation of concerns preserves the best aspects of the Unix philosophy: the visual kernel does one thing—guarantees visual atomicity and hardware integrity—while pluggable frontends handle the messy, evolving world of application protocols.
-
-Review the `sophia-x-authority` codebase and specification definitions to audit the interface or submit protocol refinements.
+What it does promise is smaller and, to me, worth having. The program that owns your screen does not parse your applications' wire protocols. The program that does can die without killing Engine. Replacing it, or writing the next one in another language, waits on the shared contract — which is why that contract matters.

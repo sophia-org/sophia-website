@@ -1,42 +1,100 @@
 +++
-title = "Sophia changed direction: one 9P core"
+title = "The 9P Core"
 date = 2026-10-14
 [extra]
 author = "niltempus"
 +++
 
-On October 9 I decided Sophia would take its shape from Plan 9, which retires most of what the September posts describe. Those posts explain a desktop split across separate socket protocols, one per role, each with its own envelope and admission path. One 9P core replaces that design, so read the older posts as history.
+Every public part of Sophia serves from one 9P2000.L core. Each role — window manager, shells, output, screen lock, factotum, inspection, portals, administration — is an export on that core, with its own endpoint, file tree, permissions and owner. They share the server code, the identity model and one rule: file descriptors never travel on the 9P stream. They use a separate channel.
 
-## What changed
+```text
+  X11 clients              9P clients: WM · shells · output
+        │                  lock · factotum · inspection · portals
+        ▼                              │
+  ┌────────────────┐          ┌────────────────────┐
+  │ X AUTHORITY    │          │ ONE 9P CORE        │
+  │ Native Rust    │          │ 9P2000.L           │
+  │ Built from     │          │ One export         │
+  │ scratch        │          │ per role           │
+  └───────┬────────┘          └────────┬───────────┘
+          │     admitted transactions, │
+          │     proposals and commands │
+          └──────────────┬─────────────┘
+                         ▼
+ ┌───────────────────────────────────────────────┐
+ │          PROTOCOL AUTHORITY CONTRACT          │
+ │       transactions in, routed input out       │
+ └───────────────────────┬───────────────────────┘
+                         ▼
+ ┌───────────────────────────────────────────────┐
+ │                SESSION OWNERS                 │
+ │          admission · routing · policy         │
+ └───────────────────────┬───────────────────────┘
+                         ▼
+ ┌───────────────────────────────────────────────┐
+ │                 SOPHIA ENGINE                 │
+ │ input · scene · commits · rendering · scanout │
+ └───────────────────────┬───────────────────────┘
+                         ▼
+ ┌───────────────────────────────────────────────┐
+ │                   DRM / KMS                   │
+ └───────────────────────────────────────────────┘
+```
 
-Every public role moves onto a single 9P server: window manager, shells, output, screen lock, factotum, read-only inspection and portals. The portal service has landed and is connected to the X clipboard, though it still needs testing on real hardware. Administration and the metadata broker still use the old socket protocol. They'll move over too, and the old protocol goes away once the last of them passes its tests.
+The contract in the middle is not written yet. Today's X wiring is its first user in waiting, not the contract itself, and the native 9P application frontend waits on it too.
 
-The central idea is now the namespace. It means what a connection can reach: the role endpoints in its socket directory, and the tree it gets when it attaches. A client proves its identity through factotum when it attaches, and that identity holds for the life of the connection. The server builds the tree from the identity and its grants. The client doesn't build it, store it or edit it. The server checks every attach, walk, open, read and write. Hiding a path grants nothing; only the server's check grants or refuses access.
+A small command is a line written to a `ctl` file; state is a line read from a `status` file. Window-manager and shell traffic runs at frame rate, so it keeps compact binary records. A client learns which roles it may use from a discovery file in its own socket directory. There is no registry to ask.
 
-Portals change with it. The portal service decides from a few fixed facts and carries nothing out itself. The receiving frontend does that. A 9P recipient receives one object bound into its tree for the life of the grant. Revocation unbinds it, and an open file answers `ESTALE`. An X recipient receives the same thing translated into X terms, such as a selection or a drag. Descriptors never travel on the 9P stream; they use a separate channel.
+## Namespaces
 
-Capture goes first. One grant binds one named output into the requester's tree: a frame record and a file that returns the screenshot, up to a size limit. The session lock refuses capture, and locking cancels capture in flight. Revoking a grant stops the next read, but it can't recall bytes the client has already read. Capture now works on both physical displays in my daily session, and locking the screen or changing a display revokes old grants on time. Capturing mirrored displays, and what that costs, still needs testing.
+A namespace is everything a connection can reach. A 9P client the session launches proves its identity through factotum at attach, and that identity is fixed for the connection. The server composes the client's tree from the identity and its grants, then checks every attach, walk, open, read and write. The client cannot build or alter its own tree. Hiding a path protects nothing; the server's check is the protection.
 
-## What Sophia borrows from Plan 9
+X11 clients enter through the X authority's own admission — a fresh cookie per session, not factotum — and are then held to the same rule: resources are keyed by namespace, and a lookup across the boundary fails.
 
-Two ideas carry the load. A small uniform file interface — walk, open, read, write, clunk — serves every role. A namespace composed per identity bounds what each client can reach.
+```text
+          9P attach                       X11 admission
+   factotum + launch record          socket + session cookie
+                    └────────────┬────────────┘
+                                 ▼
+              admission context, fixed per connection
+                                 ▼
+           tree composed from identity and grants
+                                 ▼
+   ┌───────────────────┐  portal grant  ┌───────────────────┐
+   │ Namespace A       │ ─────────────▶ │ Namespace B       │
+   │ shared            │  (only edge)   │ confined          │
+   └───────────────────┘                └───────────────────┘
 
-Sophia borrows more than that. Small controls become a line written to a `ctl` file and state a line read from a `status` file, with no ioctls. Frame-rate role traffic keeps compact binary records. Portal routing follows the plumber: rules over bounded facts, with the recipient doing the work. An application can export its own tree and delegate a service by the same bind that carries a portal grant, as Acme did. A translator can re-serve a window's files to its own clients, as Rio did. Factotum grows from unlocking the screen to proving identity whenever a client attaches, so keys stay in one place. The tree itself becomes the catalog: a client reads its discovery file to find the roles it may use, so there's no separate registry.
+   The recipient acts: a 9P bind (revoked, the open file
+   answers ESTALE) or a translation into X terms.
+```
 
-Sophia also leaves some things out. It has no draw protocol, because Engine already owns composition. It doesn't treat kernel mounts as a security boundary: a mount helps a client that wants paths, but it proves nothing about what the client may touch. Replies never carry file descriptors, because none can cross a mount and the code that routes messages should never handle one. Plan 9 supplies the structure, with a transactional compositor in the middle.
+## Portals
 
-## What did not change
+Portals are the only way between namespaces. The portal service decides from a few fixed facts and carries nothing itself. The recipient does the work: one object bound into a 9P tree for the life of the grant, or the same transfer in X terms, such as a selection.
 
-Engine still owns physical input, the scene graph, visual commits, rendering and scanout, and still speaks no client protocol. The window manager still sees only opaque nodes, never titles, process IDs or pixels.
+Screen capture is the first portal. A grant binds one named output into the requester's tree — a frame record and the screenshot bytes, up to a size limit. Locking the screen or changing a display revokes old grants. Capture works on both of my physical displays; mirrored displays are still being tested.
 
-X11 remains a first-class frontend with a native authority written from scratch in Rust. X clients keep their socket admission, namespace checks, DRI3 descriptors and shared memory. The 9P decision adds a second frontend beside it for native applications, built on the core once its design is done. Both will reach Engine through one shared contract, defined in one place. Today's X wiring becomes the first user of that contract instead of being the contract.
+## Plan 9, on Linux — and, in time, FreeBSD
 
-Wayland stays off the roadmap. Another developer can write a Wayland compatibility layer as a 9P client of the application frontend, with its clients carried as sub-identities. I'll write one myself only if I run out of other options. The September posts blurred what's possible with what's planned, and they shouldn't have.
+Plan 9 came out of Bell Labs in the late 1980s, from the people who had built Unix and wanted to push its best idea further. In Unix, many things look like files. In Plan 9, everything is a file, served over one protocol, 9P, and every process gets its own namespace — a private view of those files, assembled by binding trees together. A machine across the network could be used as naturally as a local disk, because both arrived the same way: as files in your namespace.
 
-Agents are ordinary clients. An agent attaches, proves an identity and receives a composed tree. It reads status files, writes one-line commands and requests portal grants. Observer, operator and driver name grant recipes, not ranks, and no recipe inherits another's grants. Sophia ships no agent harness and no feature built for one agent.
+Sophia is not Plan 9, and it does not run on Plan 9. It runs on Linux today, with DRM/KMS displays, libinput, DMA-BUF buffers and Linux processes. What it takes from Plan 9 is the structure, not the operating system.
 
-## Where this stands
+The borrowing is specific. The per-identity namespace becomes a tree the 9P core composes at attach and checks on every operation. Factotum, Plan 9's authentication agent, becomes the place a launched client proves who it is, so keys stay in one process. The plumber, which routed messages by rules and let the recipient do the work, becomes the portal service. Discovery by the tree replaces a registry: a client reads its discovery file and finds the roles it may use.
 
-The window-manager, shell, output, lock, factotum, inspection and portal roles run on the 9P core today, and the X authority and Engine run my desktop every day. Authenticated connections and per-client namespaces landed on October 12 for programs the session launches. Administration and the broker still have to move, the shared contract and the application frontend are still open, and mirrored capture still needs testing. I count each piece when it lands and passes its tests.
+The departures are just as specific, and Linux is the reason for most of them. There is no draw protocol, because Engine already owns composition. Kernel mounts are never the authority — clients connect to the core directly, and the server's check, not a hidden path, decides what a client may touch. File descriptors, which no 9P reply can carry, cross on a Linux side channel, the same way DRI3 reads them at the X socket. And reach into the host — what a confined client may touch outside Sophia — belongs to a separate containment driver, not to the namespace at all.
 
-The September posts promised pluggable frontends over socket protocols. That's no longer the plan; this post describes the one that replaced it.
+Plan 9 also points to work Sophia has not done: an application exporting its own tree, as Acme did, or a translator re-serving window files to its own clients, as Rio did. Those wait on the application frontend. I name them here as directions, not features.
+
+The aim is for Sophia to be cross-platform, and the Plan 9 shape is what makes that aim plausible. Only the backend, the renderer and the narrow adapter crates touch the operating system, so a port is bounded work in known places rather than a rewrite. FreeBSD is the named next port — a backend there, and a containment driver built on jail and Capsicum fed the same policy that Linux turns into bubblewrap arguments. That port is still to do: the syscall and dependency audit comes first, and I will not claim FreeBSD runs until it does. A plain 9P2000 dialect, beside today's 9P2000.L, is the later portability target for the protocol itself.
+
+Linux supplies the hardware, the drivers and the processes today. Plan 9 supplies the shape they are arranged in — on any system Sophia learns to run on.
+
+## Where it stands
+
+The window-manager, shell, output, lock, factotum, inspection and portal roles run on the core today, and the X authority and Engine run my desktop every day. Administration runs on the core by default, its installed-session acceptance still pending; the metadata broker still uses the old socket protocol. The X authority implements part of X11, and compatibility work continues. Drag-and-drop has decision machinery but no finished native executor.
+
+Agents are ordinary clients: a launched agent attaches with its own identity and tree, reads status files, writes one-line commands and asks for portal grants. Observer, operator and driver are grant recipes, not ranks, and none inherits another's.
+
+I count a piece when it lands and passes its tests, not before.
