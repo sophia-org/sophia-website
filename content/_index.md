@@ -25,13 +25,19 @@ I started Sophia because I didn't like either of the usual choices. A traditiona
   └───────┬───────┘         └───────┬────────┘
           └────────────┬────────────┘
                        ▼
-        PROTOCOL AUTHORITY CONTRACT
-        transactions in, routed input out
+   ┌───────────────────────────────────────┐
+   │      PROTOCOL AUTHORITY CONTRACT      │
+   │   transactions in, routed input out   │
+   └───────────────────┬───────────────────┘
                        ▼
-               SOPHIA ENGINE
-        scene · commits · rendering · scanout
+   ┌───────────────────────────────────────┐
+   │             SOPHIA ENGINE             │
+   │ scene · commits · rendering · scanout │
+   └───────────────────┬───────────────────┘
                        ▼
-                   DRM / KMS
+   ┌───────────────────────────────────────┐
+   │               DRM / KMS               │
+   └───────────────────────────────────────┘
 ```
 
 Engine sits at the bottom. It owns the input devices, the scene graph, rendering and the display, and it doesn't speak any client protocol. It accepts transactions that have already been checked, and it sends back input, results and changes to the display layout.
