@@ -54,6 +54,24 @@ Here's what happens when a window changes. The application draws, and its fronte
 
 A namespace is everything a connection can reach. When a client connects, it proves its identity through factotum, and that identity holds for as long as the connection lasts. The server builds the client's file tree from the identity and whatever it has been granted. The client can't build the tree or change it. Then the server checks every step: connecting, walking to a path, opening a file, and every read or write after that. Hiding a path doesn't protect anything; the server's check does.
 
+```text
+          9P attach                       X11 admission
+   factotum + launch record          socket + session cookie
+                    └────────────┬────────────┘
+                                 ▼
+              admission context, fixed per connection
+                                 ▼
+           tree composed from identity and grants
+                                 ▼
+   ┌───────────────────┐  portal grant  ┌───────────────────┐
+   │ Namespace A       │ ─────────────▶ │ Namespace B       │
+   │ shared            │  (only edge)   │ confined          │
+   └───────────────────┘                └───────────────────┘
+
+   The recipient acts: a 9P bind (revoked, the open file
+   answers ESTALE) or a translation into X terms.
+```
+
 That makes shared and confined sessions two different recipes rather than two different code paths. A trusted terminal and a confined browser get different trees. The browser can't name or read the terminal's windows, and any lookup that crosses namespaces fails.
 
 Portals are the only way across. When a clipboard selection, a drag or a screenshot has to move between namespaces, the portal service decides whether to allow it but doesn't do the work itself. The receiving side does. A 9P client gets one object bound into its tree for as long as the grant lasts; revoke the grant, and the open file starts answering `ESTALE`. An X client gets the same thing in X terms, such as a selection or a drag. File descriptors never travel over 9P; they use a separate channel.
