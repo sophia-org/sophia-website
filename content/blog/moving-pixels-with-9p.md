@@ -32,67 +32,57 @@ Sophia has no such luck. On Linux, the kernel owns the screen hardware, but a no
 Sophia keeps 9P for control in both cases. Only the pixels change route.
 
 - **Bytes.** The app sends the frame as records in 9P, and the session puts the bytes together on its side. This is simple, and it works everywhere 9P works. It also copies every byte, every frame.
-- **Sealed.** The app renders into a special piece of memory (a *memfd*), then *seals* it: frozen, shrink-proof, safe to share. The descriptor for that memory crosses on a small side socket, next to 9P — never in it. The session maps the same memory, checks it, and shows it. No copy.
+- **Sealed.** The app renders into a special piece of memory (a *memfd*), then *seals* it: frozen, shrink-proof, safe to share. The descriptor for that memory crosses on a small side socket, next to 9P — never in it. The session maps the same memory, checks it, and shows it. The frame is not copied into a second buffer — though making the sealed memory still costs work, so this is not free from end to end.
 
-The sealed path is strict about order. The app asks first. The session saves one of a few offer slots and says yes. Only then may the app send the descriptor. When the last user of the frame lets go, the session says so, once. If the side channel is missing or closes, the session falls back to bytes for the rest of the run. Nothing breaks; it just copies again.
+The sealed path is strict about order. The app asks first. The session saves one of a few offer slots and says yes. Only then may the app send the descriptor. When the last user of the frame lets go, the session says so, once. If the side channel is missing, the session can fall back to bytes when the caller allows it. If the channel closes mid-run, descriptor admission stops for the rest of that run.
 
 ## The sealed system
 
 ```text
-        SOPHIA "SEALED" IMAGE SYSTEM
+              SOPHIA SEALED IMAGE PATH  (negotiated shell r9 / lock r2)
 
- ┌───────────────────────────────────────────────────────────────────────┐
- │  SHELL COMPONENT / LOCK PROVIDER  (supervised, sandboxed peer)        │
- │                                                                       │
- │   render frame ──► memfd ──► seal WRITE|GROW|SHRINK|SEAL              │
- │                    (pixels never enter 9P)                            │
- └───────┬───────────────────────────────────────────────┬───────────────┘
-         │ 9P2000.L  (control, custody, events)          │ SEQPACKET side socket
-         │                                               │ (descriptors only)
-         ▼                                               ▼
- ┌──────────────────────────────────────┐   ┌──────────────────────────────┐
- │ role root (authenticated, per epoch) │   │ image.sock                   │
- │                                      │   │                              │
- │  image-channel    endpoint, kinds    │   │  Hello   epoch, gen, no fds  │
- │  image-limits     sealed/DMA bounds  │   │                              │
- │  image-formats    pixel formats      │   │  Source  96 B metadata       │
- │                                      │   │          + SCM_RIGHTS fd ────┼──┐
- │  transaction ◄── ImageBegin          │   └──────────────┬───────────────┘  │
- │  events      ──► ChannelReady        │                  │                  │
- │              ──► ImageAdmitted       │                  │ sealed memfd     │
- │              ──► ResourceStatus      │                  │ (kernel object,  │
- │              ──► SourceReleased      │                  │  not bytes)      │
- │              ──► ChannelClosed       │                  │                  │
- └──────────────────┬───────────────────┘                  │                  │
-                    │                                      ▼                  ▼
-                    │                          ┌────────────────────────────────┐
-                    └─────────────────────────►│  SOPHIA SESSION  (compositor)  │
-                                               │                                │
-                                               │  admission ── reserve 1 of ≤4  │
-                                               │      offers ──► ImageAdmitted  │
-                                               │                                │
-                                               │  receive ──► check seals,      │
-                                               │      size == declared,         │
-                                               │      map fd READ-ONLY          │
-                                               │                                │
-                                               │  validate (worker)             │
-                                               │                                │
-                                               │  retained resource ◄── pixel   │
-                                               │      mapping, zero copies      │
-                                               │                                │
-                                               │  candidates reference it ──►   │
-                                               │      composition / scanout     │
-                                               │                                │
-                                               │  last consumer gone ──►        │
-                                               │      SourceReleased            │
-                                               └────────────────────────────────┘
-
- ORDER PER IMAGE    1 ImageBegin ──► 2 ImageAdmitted ──► 3 Source (fd)
-                    ──► 4 ResourceStatus ──► 5 SourceReleased
-                    (never 3 before 2; exactly one 5 per admitted offer)
-
- FALLBACK           no image-channel, or ChannelClosed
-                    ──► byte upload for the rest of the epoch
+ +------------------------------------------------------------------------+
+ | SHELL COMPONENT / LOCK PROVIDER  (supervised, sandboxed peer)          |
+ |                                                                        |
+ | Prepare pixels -> fresh memfd -> seal WRITE | GROW | SHRINK | SEAL     |
+ | Send its descriptor only after ImageAdmitted.                          |
+ +-------------+------------------------------------+---------------------+
+               |                                    |
+       9P2000.L control/events              SEQPACKET side socket
+               |                                    |
+ +-------------v------------------+   +-------------v---------------------+
+ | Authenticated role root        |   | Discovered endpoint (image.sock)  |
+ |                                |   |                                   |
+ | image-channel: endpoint, kinds |   | Hello: 40 bytes, no FDs           |
+ | image-limits: budgets          |   |   role, epoch, channel generation |
+ | image-formats: formats         |   |                                   |
+ |                                |   | Source: 200 bytes + one FD        |
+ | Peer -> ImageBegin             |   |   via SCM_RIGHTS (sealed source)  |
+ | Peer <- ChannelReady           |   |   header + metadata + plane rows  |
+ | Peer <- ImageAdmitted          |   |                                   |
+ | Peer <- ResourceStatus         |   | No pixel payload in the packet.   |
+ | Peer <- SourceReleased         |   +-------------+---------------------+
+ | Peer <- ResourceReleased       |                 |
+ | Peer <- ChannelClosed          |                 |
+ +-------------+------------------+                 |
+               |                                    |
+ +-------------v------------------------------------v---------------------+
+ | SOPHIA SESSION / ROLE RESOURCE OWNER                                   |
+ |                                                                        |
+ | Hello: verify peer custody and authenticated epoch -> ChannelReady     |
+ | ImageBegin: reserve role budget + journal slots -> ImageAdmitted       |
+ | Source: match admission; check seals and exact backing size            |
+ |         -> read-only mapping                                           |
+ |         -> worker validates premultiplied BGRA under the deadline      |
+ |         -> retain mapping as immutable resource backing                |
+ |                                                                        |
+ | ResourceStatus(Accepted) -> SourceReleased(retained backing)           |
+ |   Offer settled; Sophia still owns the backing.                        |
+ |                                                                        |
+ | Candidates reference the resource -> composition / presentation        |
+ | Retirement or revocation stops new references.                         |
+ | Last consumer ends -> ResourceReleased (while the journal is live)     |
+ +------------------------------------------------------------------------+
 ```
 
 Read it this way: the left side is talk, the right side is the one heavy thing, handed over once. 9P keeps doing what it is great at — names, rules, order and proof. The side socket does the one thing 9P cannot.
