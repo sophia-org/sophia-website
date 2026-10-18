@@ -9,11 +9,9 @@ author = "niltempus"
 
 Pixels are the one hard case.
 
-## The problem is not speed. It is shape.
+## Sharing pixels through a handle
 
-On Linux, fast graphics does not move bytes. It moves *descriptors*.
-
-A descriptor is a handle to a piece of memory that the kernel manages. One program renders a frame into that memory and hands the descriptor to another program. The second program looks at the same memory. Nothing is copied. This is how Wayland works, and it is how a buffer can reach the screen hardware without ever being copied at all.
+On Linux, programs can share graphics storage through file descriptors. A producer fills a buffer and passes a descriptor to the compositor, which can map the same backing. This avoids sending the pixel payload through the control connection. Preparing the buffer and rendering it can still require copies; sharing a descriptor does not establish an end-to-end zero-copy path.
 
 9P cannot hand over a descriptor. It only moves bytes.
 
@@ -21,25 +19,20 @@ There are good reasons for this. 9P was made to work the same over a cable, a pi
 
 So the tool that does everything else in Sophia cannot do the one thing modern Linux graphics runs on.
 
-## Plan 9 never had this problem
+## Immutable Shared Buffers
 
-In Plan 9, graphics lives in the kernel, and the kernel owns the screen. When a program uploaded its pixels, the bytes landed right next to the display. After that, programs only traded small commands: draw this picture here. The pixels stayed put.
+Sophia's production CPU image architecture is **Immutable Shared Buffers (ISB)**. The app finishes the pixels, makes their backing immutable, and passes the descriptor over a small local side socket beside 9P. Sophia validates the pixels and retains that backing while it is needed. 9P carries the admission, control messages and lifetime events.
 
-Sophia has no such luck. On Linux, the kernel owns the screen hardware, but a normal user program — the compositor — decides what goes where. Each app renders alone, in its own memory, behind its own walls. A frame is two locked doors away from the glass. Bytes can be pushed through those doors, but each push means a copy. At screen size, sixty or a hundred and twenty times a second, copies stop being cheap.
+The current Linux implementation uses a *sealed memfd*: a memory-backed file sealed against writing, growing and shrinking, with the seal set itself sealed. “Sealed” describes this mechanism; ISB names the architecture. An unchanged accepted image can remain available to later candidates. Changed content gets a new immutable resource.
 
-## Two ways across
+We compared ISB with sending pixels as byte records through 9P. The byte implementation remains during migration and in our benchmark comparator. It is being retired from production: clients must support ISB, and there will be no automatic byte fallback or image-size-based transport selection. If the required channel is missing, image setup fails explicitly. If it closes, new image admission stops for that connection epoch; recovery needs a fresh authenticated epoch.
 
-Sophia keeps 9P for control in both cases. Only the pixels change route.
+ISB is strict about order. The app asks first. Sophia reserves an offer slot and replies with ImageAdmitted. Only then may the app send the descriptor. Accepted followed by SourceReleased settles the offer; Sophia still holds the immutable backing. ResourceReleased is a separate event after retirement and the last consumer's release. Channel loss never authorizes destroying backing that is still in use.
 
-- **Bytes.** The app sends the frame as records in 9P, and the session puts the bytes together on its side. This is simple, and it works everywhere 9P works. It also copies every byte, every frame.
-- **Sealed.** The app renders into a special piece of memory (a *memfd*), then *seals* it: frozen, shrink-proof, safe to share. The descriptor for that memory crosses on a small side socket, next to 9P — never in it. The session maps the same memory, checks it, and shows it. The frame is not copied into a second buffer — though making the sealed memory still costs work, so this is not free from end to end.
-
-The sealed path is strict about order. The app asks first. The session saves one of a few offer slots and says yes. Only then may the app send the descriptor. When the last user of the frame lets go, the session says so, once. If the side channel is missing, the session can fall back to bytes when the caller allows it. If the channel closes mid-run, descriptor admission stops for the rest of that run.
-
-## The sealed system
+## The ISB path
 
 ```text
-              SOPHIA SEALED IMAGE PATH  (negotiated shell r9 / lock r2)
+              SOPHIA ISB IMAGE PATH     (negotiated shell r9 / lock r2)
 
  +------------------------------------------------------------------------+
  | SHELL COMPONENT / LOCK PROVIDER  (supervised, sandboxed peer)          |
@@ -87,10 +80,16 @@ The sealed path is strict about order. The app asks first. The session saves one
 
 Read it this way: the left side is talk, the right side is the one heavy thing, handed over once. 9P keeps doing what it is great at — names, rules, order and proof. The side socket does the one thing 9P cannot.
 
+## Copies we can avoid
+
+The current benchmark peer builds pixels in a reusable canvas, then uses the Rust SDK to write them into a fresh memfd with `pwrite`. That still transfers the pixels from the canvas into the shared backing. A mapped Rust builder would let the peer draw directly into that backing; this remains an optimization to implement and measure. The C builder already exposes a writable mapping and unmaps it before sealing. In either case, writable shared views must be gone before the buffer is sealed and offered.
+
+Sophia retains the validated mapping instead of making a separate resource-backing copy. Rendering may still upload those pixels to a GPU texture. Neither the ISB name nor passing a descriptor makes that work disappear. We will measure individual stages before changing buffer custody or adding a reusable pool.
+
 ## Where this stands
 
-This is built and under test, not shipped as a speed claim. The sealed path now runs end to end in our own tests, and we are measuring it against the byte path at a large frame size (1920×512, about 3.9 MB a frame) — the size where copies should start to hurt. Small frames mostly measure message overhead, and we do not want to fool ourselves with an easy win.
+ISB runs through both SDKs and Sophia's real image owners. The latest pilots covered a 1920×24 panel, a 4 MiB upload probe, and a fully presented 1920×512 surface. In the large presented workload, ISB used about 13–14% less combined Session-plus-client CPU and about 53% fewer allocation operations than the IPC comparator. Small-panel CPU and allocation costs remain above IPC.
 
-DMA-BUF — handing the screen hardware the buffer itself, with no mapping step at all — comes later, and only if the numbers say it is worth it.
+These were diagnostic pilots on one machine, with two CPU blocks and separate allocation runs. They establish neither statistical repeatability nor a full performance qualification. They support committing to ISB and optimizing its producer, validation and shared control machinery. The existing performance gates remain open.
 
-The lesson is narrow, and it is the good kind: a protocol can be right for a whole system and still need one small door in its side. Build the door. Keep the house.
+DMA-BUF remains separate future work for GPU-produced content. Its contract requires a bounded capture into Sophia-owned storage and proven GPU completion before release; it is not a promise of direct scanout or zero-copy composition.
