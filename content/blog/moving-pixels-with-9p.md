@@ -5,6 +5,8 @@ date = 2026-10-18
 author = "niltempus"
 +++
 
+> **Update, October 29, 2026:** the pixel design has moved on. The sealed-file path below is no longer how native shells send CPU pixels. Read [Moving Pixels, Take Two](@/blog/moving-pixels-take-two.md) for the current shape. This post stands as written.
+
 9P is good at almost everything Sophia asks of it. It carries files, names, permissions, control messages and events. It is how the window manager, the shells, the screen lock and the other parts of the system talk to the session.
 
 Pixels are the one hard case.
