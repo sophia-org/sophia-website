@@ -31,6 +31,8 @@ For each frame:
 
 If any step fails, the client leaves the tray alone. A lost answer means "do not touch it." It never means "reuse it now."
 
+Together, the slots form the ring. We call it a ring because the client keeps going around it, using each slot again after Sophia frees it.
+
 Sophia shows its photocopy, not the paper. So the client can later change the paper without changing the image Sophia accepted. That is why the tray does not need a lock.
 
 ## Drawing right on the paper
